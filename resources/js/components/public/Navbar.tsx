@@ -1,4 +1,8 @@
+import { usePage } from '@inertiajs/react';
+import { LogOut } from 'lucide-react';
+
 import { useTheme } from '../../hooks/useTheme';
+import type { User } from '../../types/auth';
 import Button from './Button';
 import Logo from './Logo';
 import ThemeToggle from './ThemeToggle';
@@ -10,8 +14,17 @@ const navLinks = [
     { label: 'FAQ', href: '#faq' },
 ];
 
+interface PageProps {
+    auth: {
+        user: User | null;
+    };
+    [key: string]: unknown;
+}
+
 export default function Navbar() {
     const { dark } = useTheme();
+    const { auth } = usePage<PageProps>().props;
+    const user = auth.user;
 
     return (
         <header className="sticky top-0 z-50 border-b border-border-default bg-neutral-primary-soft">
@@ -37,9 +50,33 @@ export default function Navbar() {
 
                 <div className="flex items-center gap-3">
                     <ThemeToggle />
-                    <Button href="#layanan" variant="brand">
-                        Pesan Sekarang
-                    </Button>
+                    {user ? (
+                        <>
+                            <span className="hidden text-sm font-medium text-body sm:inline">
+                                Halo, {user.name}
+                            </span>
+                            <Button
+                                href="/logout"
+                                method="post"
+                                className="inline-flex items-center gap-2"
+                            >
+                                <LogOut size={16} aria-hidden="true" />
+                                Keluar
+                            </Button>
+                        </>
+                    ) : (
+                        <>
+                            <a
+                                href="/login"
+                                className="text-sm font-medium text-body transition-colors hover:text-heading"
+                            >
+                                Masuk
+                            </a>
+                            <Button href="/register" variant="brand">
+                                Daftar
+                            </Button>
+                        </>
+                    )}
                 </div>
             </div>
         </header>

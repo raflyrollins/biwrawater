@@ -1,21 +1,28 @@
-import type { ComponentPropsWithoutRef, ReactNode } from 'react';
+import { router } from '@inertiajs/react';
+import type { MouseEvent, ReactNode } from 'react';
 import { cn } from '../../lib/utils';
 
 type ButtonProps = {
     variant?: 'white' | 'brand';
     size?: 'default' | 'large';
     href?: string;
+    method?: 'get' | 'post';
     children: ReactNode;
     className?: string;
-} & ComponentPropsWithoutRef<'button'>;
+} & Omit<React.ComponentPropsWithoutRef<'button'>, 'onClick'> & {
+        onClick?: (
+            e: MouseEvent<HTMLAnchorElement | HTMLButtonElement>,
+        ) => void;
+    };
 
 export default function Button({
     variant = 'brand',
     size = 'default',
     href,
+    method = 'get',
     children,
     className,
-    ...props
+    onClick,
 }: ButtonProps) {
     const classes = cn(
         'btn',
@@ -25,15 +32,27 @@ export default function Button({
     );
 
     if (href) {
+        const url = href;
+
+        function handleClick(e: MouseEvent<HTMLAnchorElement>) {
+            if (method !== 'get') {
+                e.preventDefault();
+
+                router.visit(url, { method });
+            }
+
+            onClick?.(e);
+        }
+
         return (
-            <a href={href} className={classes}>
+            <a href={url} className={classes} onClick={handleClick}>
                 {children}
             </a>
         );
     }
 
     return (
-        <button type="button" className={classes} {...props}>
+        <button type="button" className={classes} onClick={onClick}>
             {children}
         </button>
     );

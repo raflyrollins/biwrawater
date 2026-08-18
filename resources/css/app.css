@@ -412,6 +412,37 @@
         );
     }
 
+    /* Inputs (forms.md) — flat, zero radius */
+    .input {
+        width: 100%;
+        box-sizing: border-box;
+        background-color: var(--neutral-tertiary);
+        border: 1px solid var(--border-default);
+        border-radius: 0;
+        padding: 16px;
+        font-size: 16px;
+        line-height: 1.5;
+        color: var(--heading);
+        outline: none;
+        transition: border-color 150ms;
+    }
+
+    .input::placeholder {
+        color: var(--body-subtle);
+    }
+
+    .input:focus {
+        border-color: var(--brand);
+    }
+
+    .input-error {
+        border-color: var(--danger-strong);
+    }
+
+    .input-error:focus {
+        border-color: var(--danger-strong);
+    }
+
     /* Cards (cards.md) — zero radius per radius.md */
     .card {
         background-color: var(--neutral-primary-soft);
