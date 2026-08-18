@@ -1,0 +1,1 @@
+ PARSE ERROR PHP Parse error: Syntax error, unexpected T_CONSTANT_ENCAPSED_STRING, expecting ',' or ']' or ')' in vendor\psy\psysh\src\Exception\ParseErrorException.php on line 44.

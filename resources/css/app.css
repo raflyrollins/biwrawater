@@ -3,9 +3,427 @@
 @source '../views';
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 
-@theme {
+@theme inline {
     --font-sans:
-        'Instrument Sans', ui-sans-serif, system-ui, sans-serif,
-        'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
-        'Noto Color Emoji';
+        'Gabarito', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
+        'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+
+    /* Brand */
+    --color-brand: var(--brand);
+    --color-brand-strong: var(--brand-strong);
+    --color-brand-soft: var(--brand-soft);
+    --color-brand-softer: var(--brand-softer);
+
+    /* Neutral surfaces */
+    --color-neutral-primary-soft: var(--neutral-primary-soft);
+    --color-neutral-secondary-soft: var(--neutral-secondary-soft);
+    --color-neutral-tertiary-soft: var(--neutral-tertiary-soft);
+    --color-neutral-tertiary: var(--neutral-tertiary);
+    --color-neutral-quaternary: var(--neutral-quaternary);
+    --color-dark: var(--dark);
+    --color-dark-strong: var(--dark-strong);
+    --color-disabled: var(--disabled);
+
+    /* Text */
+    --color-heading: var(--heading);
+    --color-body: var(--body);
+    --color-body-subtle: var(--body-subtle);
+    --color-on-brand: var(--on-brand);
+    --color-on-brand-muted: var(--on-brand-muted);
+    --color-fg-brand: var(--fg-brand);
+    --color-fg-brand-strong: var(--fg-brand-strong);
+    --color-fg-disabled: var(--fg-disabled);
+
+    /* Borders */
+    --color-border-default: var(--border-default);
+    --color-border-buffer: var(--border-buffer);
+
+    /* Status */
+    --color-success-soft: var(--success-soft);
+    --color-success-strong: var(--success-strong);
+    --color-danger-soft: var(--danger-soft);
+    --color-danger-strong: var(--danger-strong);
+    --color-warning-soft: var(--warning-soft);
+    --color-warning: var(--warning);
+}
+
+:root {
+    /* Brand — Primary #0094D9 (blue) */
+    --brand: #0094d9;
+    --brand-strong: #00679e;
+    --brand-soft: #cde8f7;
+    --brand-softer: #f0f8fd;
+
+    /* Neutral surfaces */
+    --neutral-primary-soft: #ffffff;
+    --neutral-secondary-soft: #f7f8f9;
+    --neutral-tertiary-soft: #edeef0;
+    --neutral-tertiary: #edeef0;
+    --neutral-quaternary: #dcdee1;
+    --dark: #1e2a33;
+    --dark-strong: #12191f;
+    --disabled: #edeef0;
+
+    /* Text */
+    --heading: #1a1d21;
+    --body: #4a4f55;
+    --body-subtle: #5c6167;
+    --on-brand: #ffffff;
+    --on-brand-muted: #f0f8fd;
+    --fg-brand: #0094d9;
+    --fg-brand-strong: #00679e;
+    --fg-disabled: #a9aeb3;
+
+    /* Borders */
+    --border-default: #dcdee1;
+    --border-buffer: #ffffff;
+
+    /* Status */
+    --success-soft: #e6fff5;
+    --success-strong: #00714a;
+    --danger-soft: #fff0f0;
+    --danger-strong: #d43030;
+    --warning-soft: #fcf1de;
+    --warning: #cb7803;
+
+    color-scheme: light;
+}
+
+/* Default: mengikuti preferensi perangkat. Class .light/.dark adalah override manual. */
+@media (prefers-color-scheme: dark) {
+    :root:where(:not(.light)) {
+        --brand: #33b0ea;
+        --brand-strong: #0094d9;
+        --brand-soft: #0a3a55;
+        --brand-softer: #04202e;
+
+        --neutral-primary-soft: #0b1620;
+        --neutral-secondary-soft: #0b1620;
+        --neutral-tertiary-soft: #0b1620;
+        --neutral-tertiary: #121d29;
+        --neutral-quaternary: #1c2a38;
+        --dark: #1e2a33;
+        --dark-strong: #24323d;
+        --disabled: #121d29;
+
+        --heading: #ffffff;
+        --body: #a9aeb3;
+        --body-subtle: #a9aeb3;
+        --on-brand: #ffffff;
+        --on-brand-muted: #f0f8fd;
+        --fg-brand: #33b0ea;
+        --fg-brand-strong: #85c9ec;
+        --fg-disabled: #4a5259;
+
+        --border-default: #121d29;
+        --border-buffer: #070f17;
+
+        --success-soft: #002e22;
+        --success-strong: #00a86b;
+        --danger-soft: #4d0a0a;
+        --danger-strong: #d43030;
+        --warning-soft: #402905;
+        --warning: #f0a83d;
+
+        color-scheme: dark;
+    }
+}
+
+:root.dark {
+    --brand: #33b0ea;
+    --brand-strong: #0094d9;
+    --brand-soft: #0a3a55;
+    --brand-softer: #04202e;
+
+    --neutral-primary-soft: #0b1620;
+    --neutral-secondary-soft: #0b1620;
+    --neutral-tertiary-soft: #0b1620;
+    --neutral-tertiary: #121d29;
+    --neutral-quaternary: #1c2a38;
+    --dark: #1e2a33;
+    --dark-strong: #24323d;
+    --disabled: #121d29;
+
+    --heading: #ffffff;
+    --body: #a9aeb3;
+    --body-subtle: #a9aeb3;
+    --on-brand: #ffffff;
+    --on-brand-muted: #f0f8fd;
+    --fg-brand: #33b0ea;
+    --fg-brand-strong: #85c9ec;
+    --fg-disabled: #4a5259;
+
+    --border-default: #121d29;
+    --border-buffer: #070f17;
+
+    --success-soft: #002e22;
+    --success-strong: #00a86b;
+    --danger-soft: #4d0a0a;
+    --danger-strong: #d43030;
+    --warning-soft: #402905;
+    --warning: #f0a83d;
+
+    color-scheme: dark;
+}
+
+@layer base {
+    html {
+        font-family: var(--font-sans);
+    }
+
+    body {
+        background-color: var(--neutral-primary-soft);
+        background-image: linear-gradient(
+            180deg,
+            var(--neutral-primary-soft) 0%,
+            var(--brand-softer) 100%
+        );
+        background-attachment: fixed;
+        color: var(--body);
+        font-size: 16px;
+        line-height: 1.625;
+        -webkit-font-smoothing: antialiased;
+    }
+
+    /* Typography — heading scale (typography.md), mobile-first */
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+        color: var(--heading);
+        font-weight: 700;
+        line-height: 1.2;
+        text-wrap: balance;
+    }
+
+    h1 {
+        font-size: 32px;
+        line-height: 1.1;
+        letter-spacing: -0.8px;
+        margin-bottom: 24px;
+    }
+
+    h2 {
+        font-size: 28px;
+        line-height: 1.15;
+        margin-bottom: 24px;
+    }
+
+    h3 {
+        font-size: 24px;
+        line-height: 1.2;
+        margin-bottom: 16px;
+    }
+
+    h4 {
+        font-size: 22px;
+        line-height: 1.25;
+        margin-bottom: 16px;
+    }
+
+    h5 {
+        font-size: 20px;
+        line-height: 1.3;
+        margin-bottom: 12px;
+    }
+
+    h6 {
+        font-size: 18px;
+        line-height: 1.35;
+        margin-bottom: 12px;
+    }
+
+    @media (min-width: 768px) {
+        h1 {
+            font-size: 40px;
+        }
+
+        h2 {
+            font-size: 36px;
+        }
+
+        h3 {
+            font-size: 30px;
+        }
+
+        h4 {
+            font-size: 26px;
+        }
+
+        h5 {
+            font-size: 22px;
+        }
+    }
+
+    @media (min-width: 1024px) {
+        h1 {
+            font-size: 60px;
+        }
+
+        h2 {
+            font-size: 44px;
+        }
+
+        h3 {
+            font-size: 36px;
+        }
+
+        h4 {
+            font-size: 30px;
+        }
+
+        h5 {
+            font-size: 24px;
+        }
+
+        h6 {
+            font-size: 20px;
+        }
+    }
+
+    a {
+        color: var(--fg-brand);
+        text-decoration: underline;
+    }
+
+    a:hover {
+        text-decoration: none;
+    }
+}
+
+@layer components {
+    /* Section & container (layout.md) */
+    .container-section {
+        width: 100%;
+        max-width: 1152px;
+        margin-inline: auto;
+        padding-inline: 24px;
+    }
+
+    .section {
+        padding-block: 64px;
+    }
+
+    @media (min-width: 1024px) {
+        .section {
+            padding-block: 96px;
+        }
+    }
+
+    .section-header {
+        margin-bottom: 48px;
+    }
+
+    /* Buttons (buttons.md) — flat, zero radius, no borders/shadows */
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 16px 24px;
+        border: 0;
+        border-radius: 0;
+        font-size: 16px;
+        font-weight: 500;
+        line-height: 1;
+        cursor: pointer;
+        box-sizing: border-box;
+        transition: background-color 150ms;
+        text-decoration: none;
+        text-align: center;
+    }
+
+    .btn-large {
+        font-size: 20px;
+        padding: 20px 40px;
+    }
+
+    .btn-white {
+        background-color: #ffffff;
+        color: var(--fg-brand);
+    }
+
+    .btn-white:hover {
+        background-color: var(--neutral-tertiary-soft);
+        color: var(--fg-brand);
+    }
+
+    .btn-brand {
+        background-color: var(--brand);
+        color: var(--on-brand);
+    }
+
+    .btn-brand:hover {
+        background-color: var(--brand-strong);
+        color: var(--on-brand);
+    }
+
+    .btn:focus-visible {
+        outline: 2px solid var(--brand);
+        outline-offset: 2px;
+    }
+
+    .btn-white:focus-visible {
+        outline: 2px solid var(--on-brand);
+    }
+
+    .btn:disabled {
+        background-color: var(--disabled);
+        color: var(--fg-disabled);
+        cursor: not-allowed;
+    }
+
+    .btn:disabled:hover {
+        background-color: var(--disabled);
+    }
+
+    /* Gradient surfaces — warna mengikuti token (otomatis berganti per mode) */
+    .bg-gradient-brand {
+        background-image: linear-gradient(
+            135deg,
+            var(--brand) 0%,
+            var(--brand-strong) 100%
+        );
+    }
+
+    .bg-gradient-brand-strong {
+        background-image: linear-gradient(
+            160deg,
+            var(--brand-strong) 0%,
+            var(--brand) 100%
+        );
+    }
+
+    .bg-gradient-page {
+        background-image: linear-gradient(
+            180deg,
+            var(--neutral-tertiary-soft) 0%,
+            var(--brand-softer) 100%
+        );
+    }
+
+    .bg-gradient-dark {
+        background-image: linear-gradient(
+            180deg,
+            var(--dark) 0%,
+            var(--dark-strong) 100%
+        );
+    }
+
+    /* Cards (cards.md) — zero radius per radius.md */
+    .card {
+        background-color: var(--neutral-primary-soft);
+        border: 1px solid var(--border-default);
+    }
+
+    /* Small caps label (typography.md) */
+    .label-caps {
+        display: inline-block;
+        font-size: 12px;
+        font-weight: 500;
+        letter-spacing: 0.4px;
+        text-transform: uppercase;
+    }
 }

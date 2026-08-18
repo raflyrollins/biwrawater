@@ -2,8 +2,11 @@
 
 namespace App\Http\Middleware;
 
+use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\View;
 use Inertia\Middleware;
+use Symfony\Component\HttpFoundation\Response;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -17,7 +20,17 @@ class HandleInertiaRequests extends Middleware
     protected $rootView = 'app';
 
     /**
-     * Determines the current asset version.
+     * Handle an incoming request.
+     */
+    public function handle(Request $request, Closure $next): Response
+    {
+        View::share('appearance', $request->cookie('appearance', 'system'));
+
+        return parent::handle($request, $next);
+    }
+
+    /**
+     * Determine the current asset version.
      *
      * @see https://inertiajs.com/asset-versioning
      */
@@ -38,6 +51,7 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'name' => config('app.name'),
+            'appearance' => $request->cookie('appearance', 'system'),
             'auth' => [
                 'user' => $request->user(),
             ],
