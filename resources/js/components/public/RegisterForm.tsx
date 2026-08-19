@@ -4,6 +4,7 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 
 import { cn } from '../../lib/utils';
+import { register as authRegister } from '../../routes/auth';
 import FieldError from './FieldError';
 
 interface RegisterFormProps {
@@ -23,7 +24,7 @@ export default function RegisterForm({ onSwitchMode }: RegisterFormProps) {
 
     function submit(e: FormEvent) {
         e.preventDefault();
-        post('/register');
+        post(authRegister.url());
     }
 
     return (

@@ -1,0 +1,183 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Http\Controllers;
+
+use App\Enums\OrderStatus;
+use App\Enums\Permission;
+use App\Enums\TruckStatus;
+use App\Models\Delivery;
+use App\Models\Driver;
+use App\Models\Order;
+use App\Models\Truck;
+use App\Services\DeliveryService;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Inertia\Response;
+use Laravel\Head\Facades\Head;
+use RuntimeException;
+
+class OrderController extends Controller
+{
+    public function __construct(private readonly DeliveryService $deliveryService) {}
+
+    public function index(Request $request): Response
+    {
+        Head::title('Pesanan');
+
+        $statusQuery = $request->query('status');
+        $statuses = is_array($statusQuery)
+            ? array_values(array_filter(
+                $statusQuery,
+                fn ($value) => is_string($value) && OrderStatus::tryFrom($value) !== null,
+            ))
+            : (is_string($statusQuery) && OrderStatus::tryFrom($statusQuery) !== null
+                ? [$statusQuery]
+                : []);
+        $search = $request->query('search');
+
+        $orders = Order::query()
+            ->with(['user:id,name', 'delivery'])
+            ->when($statuses !== [], fn ($query) => $query->whereIn('status', $statuses))
+            ->when(is_string($search) && $search !== '', fn ($query) => $query
+                ->where(function ($q) use ($search) {
+                    $q->where('order_number', 'like', "%{$search}%")
+                        ->orWhereHas('user', fn ($u) => $u->where('name', 'like', "%{$search}%"));
+                }))
+            ->latest()
+            ->paginate(15)
+            ->withQueryString();
+
+        return Inertia::render('dashboard/orders/Index', [
+            'orders' => $orders,
+            'filters' => [
+                'status' => $statuses,
+                'search' => $search,
+            ],
+        ]);
+    }
+
+    public function show(Request $request, Order $order): Response
+    {
+        $user = $request->user();
+
+        if (! $user->hasPermissionTo(Permission::DashboardView)) {
+            abort_unless($order->user_id === $user->id, 404);
+        }
+
+        Head::title('Detail Pesanan');
+
+        $order->load(['user', 'delivery.truck', 'delivery.driver.user', 'items', 'payments']);
+
+        return Inertia::render('dashboard/orders/Show', [
+            'order' => $order,
+            'assignOptions' => [
+                'trucks' => Truck::query()
+                    ->active()
+                    ->where('status', TruckStatus::Available)
+                    ->orderBy('name')
+                    ->get(['id', 'name', 'plate_number', 'capacity_liters']),
+                'drivers' => Driver::query()
+                    ->available()
+                    ->with('user:id,name,phone')
+                    ->get(['id', 'user_id']),
+            ],
+        ]);
+    }
+
+    public function assign(Request $request, Order $order): RedirectResponse
+    {
+        $validated = $request->validate([
+            'truck_id' => ['required', 'exists:trucks,id'],
+            'driver_id' => ['required', 'exists:drivers,id'],
+            'scheduled_at' => ['required', 'date', 'after_or_equal:now'],
+            'note' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $truck = Truck::query()->whereKey($validated['truck_id'])->firstOrFail();
+        $driver = Driver::query()->whereKey($validated['driver_id'])->firstOrFail();
+
+        try {
+            $this->deliveryService->assign(
+                $order,
+                $truck,
+                $driver,
+                now()->parse($validated['scheduled_at']),
+                $validated['note'] ?? null,
+            );
+        } catch (RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', 'Pengiriman ditugaskan dan pesanan dikonfirmasi.');
+    }
+
+    public function cancel(Request $request, Order $order): RedirectResponse
+    {
+        $user = $request->user();
+
+        if (! $user->hasPermissionTo(Permission::DashboardView)) {
+            abort_unless($order->user_id === $user->id, 404);
+
+            if (! $order->status->is(OrderStatus::Pending)) {
+                return back()->with('error', 'Hanya pesanan berstatus menunggu yang dapat dibatalkan.');
+            }
+        }
+
+        if ($order->status->is(OrderStatus::Cancelled)) {
+            return back()->with('error', 'Pesanan sudah dibatalkan.');
+        }
+
+        $order->update([
+            'status' => OrderStatus::Cancelled,
+        ]);
+
+        return back()->with('success', 'Pesanan dibatalkan.');
+    }
+
+    public function depart(Order $order, Delivery $delivery): RedirectResponse
+    {
+        $this->assertDeliveryBelongsToOrder($order, $delivery);
+
+        try {
+            $this->deliveryService->depart($delivery);
+        } catch (RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', 'Pengiriman berangkat.');
+    }
+
+    public function deliver(Order $order, Delivery $delivery): RedirectResponse
+    {
+        $this->assertDeliveryBelongsToOrder($order, $delivery);
+
+        try {
+            $this->deliveryService->deliver($delivery);
+        } catch (RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', 'Pengiriman selesai.');
+    }
+
+    public function fail(Order $order, Delivery $delivery): RedirectResponse
+    {
+        $this->assertDeliveryBelongsToOrder($order, $delivery);
+
+        try {
+            $this->deliveryService->fail($delivery);
+        } catch (RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', 'Pengiriman ditandai gagal.');
+    }
+
+    private function assertDeliveryBelongsToOrder(Order $order, Delivery $delivery): void
+    {
+        abort_unless($delivery->order_id === $order->id, 404);
+    }
+}

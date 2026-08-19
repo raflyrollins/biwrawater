@@ -4,6 +4,7 @@ import { ArrowLeft } from 'lucide-react';
 
 import LoginForm from '../../components/public/LoginForm';
 import RegisterForm from '../../components/public/RegisterForm';
+import { home, login, register } from '../../routes';
 
 const LOGIN_IMG =
     'https://images.unsplash.com/photo-1538300342682-cf57afb97285?w=800&q=80';
@@ -41,7 +42,9 @@ export default function Auth({ mode }: AuthProps) {
     const imgSrc = isLogin ? LOGIN_IMG : REGISTER_IMG;
 
     function switchMode(nextMode: 'login' | 'register') {
-        router.visit(nextMode === 'login' ? '/login' : '/register', {
+        const url = nextMode === 'login' ? login.url() : register.url();
+
+        router.visit(url, {
             preserveState: true,
             replace: true,
         });
@@ -59,7 +62,7 @@ export default function Auth({ mode }: AuthProps) {
 
             <div className="bg-gradient-dark relative flex min-h-dvh items-center justify-center p-4">
                 <Link
-                    href="/"
+                    href={home.url()}
                     className="absolute top-6 left-6 z-20 inline-flex items-center gap-1.5 text-sm font-medium text-on-brand-muted no-underline transition-colors hover:text-white"
                 >
                     <ArrowLeft size={16} aria-hidden="true" />

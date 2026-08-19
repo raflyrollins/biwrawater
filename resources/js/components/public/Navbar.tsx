@@ -2,6 +2,8 @@ import { usePage } from '@inertiajs/react';
 import { LogOut } from 'lucide-react';
 
 import { useTheme } from '../../hooks/useTheme';
+import { login, register } from '../../routes';
+import { logout as authLogout } from '../../routes/auth';
 import type { User } from '../../types/auth';
 import Button from './Button';
 import Logo from './Logo';
@@ -56,7 +58,7 @@ export default function Navbar() {
                                 Halo, {user.name}
                             </span>
                             <Button
-                                href="/logout"
+                                href={authLogout.url()}
                                 method="post"
                                 className="inline-flex items-center gap-2"
                             >
@@ -67,12 +69,12 @@ export default function Navbar() {
                     ) : (
                         <>
                             <a
-                                href="/login"
+                                href={login.url()}
                                 className="text-sm font-medium text-body transition-colors hover:text-heading"
                             >
                                 Masuk
                             </a>
-                            <Button href="/register" variant="brand">
+                            <Button href={register.url()} variant="brand">
                                 Daftar
                             </Button>
                         </>

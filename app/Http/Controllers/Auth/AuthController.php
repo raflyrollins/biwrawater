@@ -30,7 +30,7 @@ class AuthController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('home'));
+        return redirect()->intended(route('dashboard.index'));
     }
 
     public function register(Request $request): RedirectResponse
@@ -51,7 +51,7 @@ class AuthController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('home'));
+        return redirect()->intended(route('dashboard.index'));
     }
 
     public function logout(Request $request): RedirectResponse

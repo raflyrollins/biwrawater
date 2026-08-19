@@ -4,6 +4,7 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 
 import { cn } from '../../lib/utils';
+import { login as authLogin } from '../../routes/auth';
 import FieldError from './FieldError';
 
 interface LoginFormProps {
@@ -21,7 +22,7 @@ export default function LoginForm({ onSwitchMode }: LoginFormProps) {
 
     function submit(e: FormEvent) {
         e.preventDefault();
-        post('/login');
+        post(authLogin.url());
     }
 
     return (
