@@ -1,5 +1,7 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Clock } from 'lucide-react';
+
+import { useEffect } from 'react';
 
 import AssignDeliveryForm from '../../../components/dashboard/AssignDeliveryForm';
 import type {
@@ -8,11 +10,16 @@ import type {
 } from '../../../components/dashboard/AssignDeliveryForm';
 import DashboardLayout from '../../../components/dashboard/DashboardLayout';
 import StatusBadge from '../../../components/dashboard/StatusBadge';
+import { useDashboardRealtime } from '../../../hooks/useDashboardRealtime';
 import { formatDateTime, formatRupiah } from '../../../lib/format';
+import { openSnapPayment } from '../../../lib/midtrans';
 import { index as dashboardIndex } from '../../../routes/dashboard';
 import {
     cancel as ordersCancel,
+    confirm as ordersConfirm,
     index as ordersIndex,
+    pay as ordersPay,
+    payStatus as ordersPayStatus,
 } from '../../../routes/dashboard/orders';
 import {
     depart,
@@ -35,6 +42,8 @@ interface OrderDetail {
     status: string;
     payment_method: string;
     payment_status: string;
+    payment_due_at: string | null;
+    payment_due_passed: boolean;
     subtotal: number;
     discount_total: number;
     grand_total: number;
@@ -75,14 +84,49 @@ interface PageProps {
     auth: {
         permissions: string[];
     };
+    snap: {
+        token: string;
+        client_key: string;
+        script: string;
+    } | null;
     [key: string]: unknown;
 }
 
 export default function OrderShow({ order, assignOptions }: OrderShowProps) {
-    const { auth } = usePage<PageProps>().props;
+    const { auth, snap } = usePage<PageProps>().props;
     const delivery = order.delivery;
     const permissions = new Set(auth.permissions);
     const isAdmin = permissions.has('dashboard.view');
+
+    useDashboardRealtime({ orderId: order.id });
+
+    useEffect(() => {
+        if (!snap) {
+            return;
+        }
+
+        const timer = setTimeout(() => {
+            openSnapPayment({
+                token: snap.token,
+                clientKey: snap.client_key,
+                script: snap.script,
+                onSuccess: () => {
+                    router.get(ordersPayStatus.url({ order: order.uuid }));
+                },
+                onPending: () => {
+                    router.reload();
+                },
+                onClose: () => {
+                    router.reload();
+                },
+            });
+        }, 400);
+
+        return () => {
+            clearTimeout(timer);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [snap]);
 
     function action(url: string) {
         router.post(url);
@@ -92,6 +136,18 @@ export default function OrderShow({ order, assignOptions }: OrderShowProps) {
         if (window.confirm(message)) {
             router.post(url);
         }
+    }
+
+    function paymentMethodLabel(method: string): string {
+        if (method === 'midtrans') {
+            return 'Midtrans';
+        }
+
+        if (method === 'cod') {
+            return 'COD';
+        }
+
+        return 'Transfer';
     }
 
     return (
@@ -124,8 +180,39 @@ export default function OrderShow({ order, assignOptions }: OrderShowProps) {
 
                 <div className="mt-8 grid gap-6 lg:grid-cols-3">
                     <div className="space-y-6 lg:col-span-2">
-                        {/* Assign form / delivery status */}
+                        {/* Konfirmasi admin */}
                         {order.status === 'pending' &&
+                            permissions.has('orders.confirm') && (
+                                <div className="card p-6">
+                                    <p className="label-caps text-body-subtle">
+                                        Konfirmasi Pesanan
+                                    </p>
+                                    <p className="mt-4 text-sm leading-relaxed text-body">
+                                        Setelah dikonfirmasi, pelanggan mendapat
+                                        batas waktu 20 menit untuk membayar
+                                        melalui Midtrans. Pengiriman baru bisa
+                                        ditugaskan setelah pembayaran lunas.
+                                    </p>
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            confirmAction(
+                                                ordersConfirm.url({
+                                                    order: order.uuid,
+                                                }),
+                                                `Konfirmasi pesanan ${order.order_number}?`,
+                                            )
+                                        }
+                                        className="btn btn-brand mt-5"
+                                    >
+                                        Konfirmasi Pesanan
+                                    </button>
+                                </div>
+                            )}
+
+                        {/* Assign form / delivery status */}
+                        {order.status === 'confirmed' &&
+                            order.payment_status === 'paid' &&
                             permissions.has('orders.assign') && (
                                 <AssignDeliveryForm
                                     orderUuid={order.uuid}
@@ -260,7 +347,11 @@ export default function OrderShow({ order, assignOptions }: OrderShowProps) {
                                         Pengiriman
                                     </p>
                                     <p className="mt-4 text-sm text-body-subtle">
-                                        Menunggu konfirmasi admin.
+                                        {order.status === 'pending'
+                                            ? 'Menunggu konfirmasi admin.'
+                                            : order.payment_status === 'unpaid'
+                                              ? 'Menunggu pembayaran Anda untuk memulai pengiriman.'
+                                              : 'Menunggu penugasan pengiriman.'}
                                     </p>
                                 </div>
                             )
@@ -390,6 +481,75 @@ export default function OrderShow({ order, assignOptions }: OrderShowProps) {
                             </div>
                         </div>
 
+                        {order.status === 'confirmed' &&
+                            order.payment_status === 'unpaid' && (
+                                <div className="card p-6">
+                                    <p className="label-caps text-body-subtle">
+                                        Pembayaran
+                                    </p>
+                                    {order.payment_due_passed ? (
+                                        <p className="mt-4 flex items-start gap-2 text-sm leading-relaxed text-danger-strong">
+                                            <Clock
+                                                size={16}
+                                                className="mt-0.5 shrink-0"
+                                                aria-hidden="true"
+                                            />
+                                            Batas waktu pembayaran telah lewat.{' '}
+                                            {isAdmin
+                                                ? 'Pesanan dapat dibatalkan.'
+                                                : 'Hubungi admin untuk bantuan.'}
+                                        </p>
+                                    ) : (
+                                        <>
+                                            <p className="mt-4 flex items-start gap-2 text-sm leading-relaxed text-body">
+                                                <Clock
+                                                    size={16}
+                                                    className="mt-0.5 shrink-0 text-fg-brand"
+                                                    aria-hidden="true"
+                                                />
+                                                <span>
+                                                    Batas pembayaran:{' '}
+                                                    <span className="font-semibold text-heading">
+                                                        {formatDateTime(
+                                                            order.payment_due_at,
+                                                        )}
+                                                    </span>
+                                                    . Pembayaran melalui
+                                                    Midtrans (Virtual Account,
+                                                    QRIS, dll).
+                                                </span>
+                                            </p>
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    action(
+                                                        ordersPay.url({
+                                                            order: order.uuid,
+                                                        }),
+                                                    )
+                                                }
+                                                className="btn btn-brand mt-5 w-full"
+                                            >
+                                                Bayar Sekarang
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    router.get(
+                                                        ordersPayStatus.url({
+                                                            order: order.uuid,
+                                                        }),
+                                                    )
+                                                }
+                                                className="mt-3 w-full border border-border-default px-4 py-3 text-sm font-semibold text-body transition-colors hover:bg-neutral-tertiary-soft"
+                                            >
+                                                Cek Status Pembayaran
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
+                            )}
+
                         {order.payments.length > 0 && (
                             <div className="card p-6">
                                 <p className="label-caps text-body-subtle">
@@ -403,9 +563,9 @@ export default function OrderShow({ order, assignOptions }: OrderShowProps) {
                                         >
                                             <div>
                                                 <p className="font-semibold text-heading">
-                                                    {payment.method === 'cod'
-                                                        ? 'COD'
-                                                        : 'Transfer'}
+                                                    {paymentMethodLabel(
+                                                        payment.method,
+                                                    )}
                                                 </p>
                                                 <p className="text-xs text-body-subtle">
                                                     {formatDateTime(

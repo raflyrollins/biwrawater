@@ -4,6 +4,7 @@ import { LogOut } from 'lucide-react';
 import { useTheme } from '../../hooks/useTheme';
 import { login, register } from '../../routes';
 import { logout as authLogout } from '../../routes/auth';
+import { index as checkout } from '../../routes/checkout';
 import type { User } from '../../types/auth';
 import Button from './Button';
 import Logo from './Logo';
@@ -57,6 +58,12 @@ export default function Navbar() {
                             <span className="hidden text-sm font-medium text-body sm:inline">
                                 Halo, {user.name}
                             </span>
+                            <Button
+                                href={checkout.url()}
+                                className="hidden sm:inline-flex"
+                            >
+                                Pesan
+                            </Button>
                             <Button
                                 href={authLogout.url()}
                                 method="post"

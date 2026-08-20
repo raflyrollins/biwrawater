@@ -1,4 +1,6 @@
 import { ArrowRight, Phone } from 'lucide-react';
+
+import { index as checkout } from '../../routes/checkout';
 import Button from './Button';
 
 const heroStats = [
@@ -40,7 +42,7 @@ export default function Hero() {
 
                         <div className="mt-10 flex flex-wrap items-center gap-4">
                             <Button
-                                href="#layanan"
+                                href={checkout.url()}
                                 variant="white"
                                 size="large"
                             >

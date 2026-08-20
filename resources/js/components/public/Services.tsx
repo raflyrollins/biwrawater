@@ -1,5 +1,7 @@
 import { Check, Droplets, Truck } from 'lucide-react';
 
+import { index as checkout } from '../../routes/checkout';
+
 const variants = [
     {
         name: 'Tangki 3.000L',
@@ -85,7 +87,7 @@ export default function Services() {
                             </ul>
 
                             <a
-                                href="#cara-pesan"
+                                href={checkout.url()}
                                 className="btn btn-brand mt-8 w-full"
                             >
                                 Pesan Varian Ini

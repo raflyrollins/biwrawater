@@ -15,9 +15,12 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
-test('admin menugaskan truk dan driver ke pesanan', function () {
+test('admin menugaskan truk dan driver ke pesanan yang sudah dibayar', function () {
     $admin = User::factory()->admin()->create();
-    $order = Order::factory()->create();
+    $order = Order::factory()->create([
+        'status' => OrderStatus::Confirmed,
+        'payment_status' => PaymentStatus::Paid,
+    ]);
     $truck = Truck::factory()->create();
     $driver = Driver::factory()->create();
 
@@ -33,8 +36,8 @@ test('admin menugaskan truk dan driver ke pesanan', function () {
 
     $order->refresh();
 
-    expect($order->status)->toBe(OrderStatus::Confirmed);
-    expect($order->delivery)->not->toBeNull()
+    expect($order->status)->toBe(OrderStatus::Confirmed)
+        ->and($order->delivery)->not->toBeNull()
         ->and($order->delivery->status)->toBe(DeliveryStatus::Scheduled)
         ->and($order->delivery->truck_id)->toBe($truck->id)
         ->and($order->delivery->driver_id)->toBe($driver->id);
@@ -84,8 +87,11 @@ test('driver memulai dan menyelesaikan pengiriman COD', function () {
         ->and($driver->refresh()->status)->toBe(DriverStatus::Available);
 });
 
-test('pengiriman gagal mengembalikan pesanan ke antrean', function () {
-    $order = Order::factory()->create();
+test('pengiriman gagal mengembalikan pesanan ke antrean penugasan', function () {
+    $order = Order::factory()->create([
+        'status' => OrderStatus::Confirmed,
+        'payment_status' => PaymentStatus::Paid,
+    ]);
     $truck = Truck::factory()->create();
     $driverUser = User::factory()->driver()->create();
     $driver = Driver::factory()->for($driverUser)->create();
@@ -104,14 +110,17 @@ test('pengiriman gagal mengembalikan pesanan ke antrean', function () {
     $delivery->refresh();
 
     expect($delivery->status)->toBe(DeliveryStatus::Failed)
-        ->and($order->status)->toBe(OrderStatus::Pending)
+        ->and($order->status)->toBe(OrderStatus::Confirmed)
         ->and($truck->refresh()->status)->toBe(TruckStatus::Available)
         ->and($driver->refresh()->status)->toBe(DriverStatus::Available);
 });
 
 test('pengiriman gagal lama digantikan saat penugasan ulang', function () {
     $admin = User::factory()->admin()->create();
-    $order = Order::factory()->create();
+    $order = Order::factory()->create([
+        'status' => OrderStatus::Confirmed,
+        'payment_status' => PaymentStatus::Paid,
+    ]);
     $truck = Truck::factory()->create();
     $driver = Driver::factory()->create();
 
@@ -170,9 +179,12 @@ test('pelanggan dapat membatalkan pesanan yang masih menunggu', function () {
     expect($order->refresh()->status)->toBe(OrderStatus::Cancelled);
 });
 
-test('penugasan ditolak untuk pesanan yang tidak menunggu', function () {
+test('penugasan ditolak untuk pesanan yang belum dibayar', function () {
     $admin = User::factory()->admin()->create();
-    $order = Order::factory()->create(['status' => OrderStatus::Confirmed]);
+    $order = Order::factory()->create([
+        'status' => OrderStatus::Confirmed,
+        'payment_status' => PaymentStatus::Unpaid,
+    ]);
     $truck = Truck::factory()->create();
     $driver = Driver::factory()->create();
 

@@ -11,8 +11,11 @@ enum Permission: string
     case DashboardView = 'dashboard.view';
 
     case OrdersView = 'orders.view';
+    case OrdersConfirm = 'orders.confirm';
     case OrdersAssign = 'orders.assign';
     case OrdersCancel = 'orders.cancel';
+
+    case AddressesManage = 'addresses.manage';
 
     case DeliveriesView = 'deliveries.view';
     case DeliveriesUpdateStatus = 'deliveries.update-status';
@@ -28,8 +31,10 @@ enum Permission: string
         return match ($this) {
             self::DashboardView => 'Melihat dashboard',
             self::OrdersView => 'Melihat pesanan',
+            self::OrdersConfirm => 'Mengonfirmasi pesanan',
             self::OrdersAssign => 'Menugaskan pengiriman',
             self::OrdersCancel => 'Membatalkan pesanan',
+            self::AddressesManage => 'Mengelola alamat',
             self::DeliveriesView => 'Melihat pengiriman',
             self::DeliveriesUpdateStatus => 'Mengubah status pengiriman',
             self::PromotionsManage => 'Mengelola promosi',

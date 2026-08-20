@@ -8,6 +8,9 @@ use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Enums\TruckStatus;
+use App\Events\DeliveryStatusChanged;
+use App\Events\OrderPaymentUpdated;
+use App\Events\OrderStatusChanged;
 use App\Models\Delivery;
 use App\Models\Driver;
 use App\Models\Order;
@@ -18,12 +21,12 @@ use RuntimeException;
 class DeliveryService
 {
     /**
-     * Tugaskan truk dan driver ke pesanan, lalu kunci status order.
+     * Tugaskan truk dan driver ke pesanan yang sudah dikonfirmasi dan lunas.
      */
     public function assign(Order $order, Truck $truck, Driver $driver, CarbonInterface $scheduledAt, ?string $note = null): Delivery
     {
-        if (! $order->status->is(OrderStatus::Pending)) {
-            throw new RuntimeException('Hanya pesanan berstatus menunggu yang dapat ditugaskan.');
+        if (! $order->status->is(OrderStatus::Confirmed) || ! $order->payment_status->is(PaymentStatus::Paid)) {
+            throw new RuntimeException('Hanya pesanan terkonfirmasi dan sudah dibayar yang dapat ditugaskan.');
         }
 
         $order->delivery()->where('status', DeliveryStatus::Failed)->delete();
@@ -36,9 +39,7 @@ class DeliveryService
             'note' => $note,
         ]);
 
-        $order->update([
-            'status' => OrderStatus::Confirmed,
-        ]);
+        DeliveryStatusChanged::dispatch($delivery, DeliveryStatus::None);
 
         return $delivery;
     }
@@ -59,6 +60,9 @@ class DeliveryService
         $delivery->order->update([
             'status' => OrderStatus::InDelivery,
         ]);
+
+        DeliveryStatusChanged::dispatch($delivery, DeliveryStatus::Scheduled);
+        OrderStatusChanged::dispatch($delivery->order, OrderStatus::Confirmed);
 
         $this->occupyResources($delivery);
     }
@@ -82,6 +86,9 @@ class DeliveryService
             'status' => OrderStatus::Delivered,
         ]);
 
+        DeliveryStatusChanged::dispatch($delivery, DeliveryStatus::OnTheWay);
+        OrderStatusChanged::dispatch($order, OrderStatus::InDelivery);
+
         if ($order->payment_method->is(PaymentMethod::Cod)) {
             $order->payments()->create([
                 'method' => PaymentMethod::Cod,
@@ -92,13 +99,16 @@ class DeliveryService
             $order->update([
                 'payment_status' => PaymentStatus::Paid,
             ]);
+
+            OrderPaymentUpdated::dispatch($order);
         }
 
         $this->releaseResources($delivery);
     }
 
     /**
-     * Tandai pengiriman gagal; pesanan kembali menunggu untuk ditugaskan ulang.
+     * Tandai pengiriman gagal; pesanan kembali menunggu penugasan ulang
+     * (status tetap dikonfirmasi karena sudah dibayar).
      */
     public function fail(Delivery $delivery): void
     {
@@ -106,12 +116,17 @@ class DeliveryService
             throw new RuntimeException('Pengiriman yang selesai tidak dapat digagalkan.');
         }
 
+        $previousStatus = $delivery->status;
+
         $delivery->update([
             'status' => DeliveryStatus::Failed,
         ]);
         $delivery->order->update([
-            'status' => OrderStatus::Pending,
+            'status' => OrderStatus::Confirmed,
         ]);
+
+        DeliveryStatusChanged::dispatch($delivery, $previousStatus);
+        OrderStatusChanged::dispatch($delivery->order, OrderStatus::InDelivery);
 
         $this->releaseResources($delivery);
     }

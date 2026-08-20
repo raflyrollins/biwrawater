@@ -3,6 +3,7 @@ import {
     CheckCircle2,
     LayoutDashboard,
     LogOut,
+    MapPin,
     Megaphone,
     Package,
     Ticket,
@@ -17,6 +18,7 @@ import { cn } from '../../lib/utils';
 import { home } from '../../routes';
 import { logout as authLogout } from '../../routes/auth';
 import { index as dashboardIndex } from '../../routes/dashboard';
+import { index as addressesIndex } from '../../routes/dashboard/addresses';
 import { index as driversIndex } from '../../routes/dashboard/drivers';
 import { index as ordersIndex } from '../../routes/dashboard/orders';
 import { index as promoCodesIndex } from '../../routes/dashboard/promo-codes';
@@ -51,6 +53,13 @@ const NAV_ITEMS: Record<string, NavItem[]> = {
             permission: 'orders.view',
             icon: <Package size={16} aria-hidden="true" />,
             match: ['/dashboard/orders'],
+        },
+        {
+            href: addressesIndex.url(),
+            label: 'Alamat',
+            permission: 'addresses.manage',
+            icon: <MapPin size={16} aria-hidden="true" />,
+            match: ['/dashboard/addresses'],
         },
     ],
     admin: [

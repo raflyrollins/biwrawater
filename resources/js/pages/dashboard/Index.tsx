@@ -4,6 +4,7 @@ import DashboardLayout from '../../components/dashboard/DashboardLayout';
 import Pagination from '../../components/dashboard/Pagination';
 import type { PaginationLink } from '../../components/dashboard/Pagination';
 import StatusBadge from '../../components/dashboard/StatusBadge';
+import { useDashboardRealtime } from '../../hooks/useDashboardRealtime';
 import { formatDate, formatRupiah } from '../../lib/format';
 import { home } from '../../routes';
 import {
@@ -36,6 +37,8 @@ interface DashboardProps {
 }
 
 export default function DashboardIndex({ orders, stats }: DashboardProps) {
+    useDashboardRealtime();
+
     function cancelOrder(order: OrderSummary) {
         if (window.confirm('Batalkan pesanan ini?')) {
             router.post(dashboardOrdersCancel.url({ order: order.uuid }));

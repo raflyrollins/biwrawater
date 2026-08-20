@@ -9,6 +9,7 @@ import {
 
 import DashboardLayout from '../../components/dashboard/DashboardLayout';
 import StatusBadge from '../../components/dashboard/StatusBadge';
+import { useDashboardRealtime } from '../../hooks/useDashboardRealtime';
 import { formatDateTime, formatRupiah } from '../../lib/format';
 import {
     index as ordersIndex,
@@ -51,6 +52,8 @@ export default function Summary({
     recentOrders,
     todaySchedule,
 }: SummaryProps) {
+    useDashboardRealtime();
+
     const cards = [
         {
             label: 'Pendapatan (Selesai)',

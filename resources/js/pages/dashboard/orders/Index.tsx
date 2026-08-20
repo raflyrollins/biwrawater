@@ -9,6 +9,7 @@ import Pagination from '../../../components/dashboard/Pagination';
 import type { PaginationLink } from '../../../components/dashboard/Pagination';
 import StatusBadge from '../../../components/dashboard/StatusBadge';
 import MultiSelect from '../../../components/ui/MultiSelect';
+import { useDashboardRealtime } from '../../../hooks/useDashboardRealtime';
 import { formatDate, formatRupiah } from '../../../lib/format';
 import { STATUS_LABELS } from '../../../lib/labels';
 import {
@@ -46,6 +47,8 @@ const STATUS_OPTIONS = Object.entries(STATUS_LABELS).map(([value, label]) => ({
 
 export default function OrdersIndex({ orders, filters }: OrdersIndexProps) {
     const [status, setStatus] = useState<string[]>(filters.status);
+
+    useDashboardRealtime();
 
     function submitFilters(e: FormEvent) {
         e.preventDefault();

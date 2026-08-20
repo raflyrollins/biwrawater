@@ -12,6 +12,7 @@ enum DeliveryStatus: string
     case OnTheWay = 'on_the_way';
     case Delivered = 'delivered';
     case Failed = 'failed';
+    case None = 'none';
 
     public function label(): string
     {
@@ -20,6 +21,7 @@ enum DeliveryStatus: string
             self::OnTheWay => 'Dalam Perjalanan',
             self::Delivered => 'Selesai',
             self::Failed => 'Gagal',
+            self::None => '-',
         };
     }
 }

@@ -1,4 +1,6 @@
 import { ArrowRight } from 'lucide-react';
+
+import { index as checkout } from '../../routes/checkout';
 import Button from './Button';
 
 export default function CtaSection() {
@@ -19,7 +21,11 @@ export default function CtaSection() {
                         </p>
                     </div>
                     <div className="flex flex-wrap gap-4 lg:justify-end">
-                        <Button href="#layanan" variant="white" size="large">
+                        <Button
+                            href={checkout.url()}
+                            variant="white"
+                            size="large"
+                        >
                             Pesan Sekarang
                             <ArrowRight size={20} aria-hidden="true" />
                         </Button>

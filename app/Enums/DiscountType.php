@@ -2,8 +2,12 @@
 
 namespace App\Enums;
 
+use App\Enums\Concerns\HasState;
+
 enum DiscountType: string
 {
+    use HasState;
+
     case Percentage = 'percentage';
     case Fixed = 'fixed';
 

@@ -2,8 +2,12 @@
 
 namespace App\Enums;
 
+use App\Enums\Concerns\HasState;
+
 enum PaymentStatus: string
 {
+    use HasState;
+
     case Unpaid = 'unpaid';
     case Paid = 'paid';
     case Refunded = 'refunded';

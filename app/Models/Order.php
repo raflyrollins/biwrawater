@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 use Ramsey\Uuid\Uuid;
 
 /**
@@ -25,6 +26,7 @@ use Ramsey\Uuid\Uuid;
  * @property OrderStatus $status
  * @property PaymentMethod $payment_method
  * @property PaymentStatus $payment_status
+ * @property Carbon|null $payment_due_at
  * @property int $subtotal
  * @property int $discount_total
  * @property int $grand_total
@@ -41,6 +43,7 @@ use Ramsey\Uuid\Uuid;
     'status',
     'payment_method',
     'payment_status',
+    'payment_due_at',
     'subtotal',
     'discount_total',
     'grand_total',
@@ -76,6 +79,7 @@ class Order extends Model
             'status' => OrderStatus::class,
             'payment_method' => PaymentMethod::class,
             'payment_status' => PaymentStatus::class,
+            'payment_due_at' => 'datetime',
             'discount_snapshot' => 'array',
         ];
     }
@@ -87,7 +91,12 @@ class Order extends Model
             ->whereDate('created_at', now()->toDateString())
             ->count() + 1;
 
-        return sprintf('BWR-%s-%04d', $date, $sequence);
+        return sprintf(
+            'BWR-%s-%04d-%s',
+            $date,
+            $sequence,
+            Str::upper(Str::random(4)),
+        );
     }
 
     /**

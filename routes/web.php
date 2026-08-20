@@ -1,15 +1,19 @@
 <?php
 
+use App\Http\Controllers\AddressController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\AuthPageController;
+use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeliveryController;
 use App\Http\Controllers\DriverController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PromoCodeController;
 use App\Http\Controllers\PromotionController;
 use App\Http\Controllers\TruckController;
+use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', HomeController::class)->name('home');
@@ -19,6 +23,15 @@ Route::get('/register', [AuthPageController::class, 'register'])->name('register
 Route::post('/login', [AuthController::class, 'login'])->name('auth.login');
 Route::post('/register', [AuthController::class, 'register'])->name('auth.register');
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('auth.logout');
+
+Route::middleware('auth')->group(function (): void {
+    Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
+    Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
+});
+
+Route::post('/midtrans/webhook', [PaymentController::class, 'webhook'])
+    ->withoutMiddleware([ValidateCsrfToken::class])
+    ->name('midtrans.webhook');
 
 Route::middleware(['auth', 'permission:orders.view|deliveries.view|dashboard.view'])
     ->prefix('dashboard')
@@ -30,8 +43,11 @@ Route::middleware(['auth', 'permission:orders.view|deliveries.view|dashboard.vie
             ->middleware(['permission:orders.view', 'permission:dashboard.view'])
             ->name('orders.index');
         Route::get('/orders/{order}', [OrderController::class, 'show'])->middleware('permission:orders.view')->name('orders.show');
+        Route::post('/orders/{order}/confirm', [OrderController::class, 'confirm'])->middleware('permission:orders.confirm')->name('orders.confirm');
         Route::post('/orders/{order}/assign', [OrderController::class, 'assign'])->middleware('permission:orders.assign')->name('orders.assign');
         Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel'])->middleware('permission:orders.cancel')->name('orders.cancel');
+        Route::post('/orders/{order}/pay', [PaymentController::class, 'pay'])->middleware('permission:orders.view')->name('orders.pay');
+        Route::get('/orders/{order}/pay-status', [PaymentController::class, 'status'])->middleware('permission:orders.view')->name('orders.pay-status');
         Route::post('/orders/{order}/delivery/{delivery}/depart', [OrderController::class, 'depart'])->middleware('permission:deliveries.update-status')->name('orders.delivery.depart');
         Route::post('/orders/{order}/delivery/{delivery}/deliver', [OrderController::class, 'deliver'])->middleware('permission:deliveries.update-status')->name('orders.delivery.deliver');
         Route::post('/orders/{order}/delivery/{delivery}/fail', [OrderController::class, 'fail'])->middleware('permission:deliveries.update-status')->name('orders.delivery.fail');
@@ -71,5 +87,12 @@ Route::middleware(['auth', 'permission:orders.view|deliveries.view|dashboard.vie
             Route::post('/drivers/{driver}', [DriverController::class, 'update'])->name('drivers.update');
             Route::post('/drivers/{driver}/toggle', [DriverController::class, 'toggle'])->name('drivers.toggle');
             Route::delete('/drivers/{driver}', [DriverController::class, 'destroy'])->name('drivers.destroy');
+        });
+
+        Route::middleware('permission:addresses.manage')->group(function (): void {
+            Route::get('/addresses', [AddressController::class, 'index'])->name('addresses.index');
+            Route::post('/addresses', [AddressController::class, 'store'])->name('addresses.store');
+            Route::post('/addresses/{address}', [AddressController::class, 'update'])->name('addresses.update');
+            Route::delete('/addresses/{address}', [AddressController::class, 'destroy'])->name('addresses.destroy');
         });
     });

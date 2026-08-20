@@ -6,7 +6,7 @@ export function splitDateTime(value: string): { date: string; time: string } {
 }
 
 export function combineDateTime(date: string, time: string): string {
-    return date && time ? `${date}T${time}` : '';
+    return date && time ? `${date}T${time}` : date || '';
 }
 
 export function todayIso(): string {

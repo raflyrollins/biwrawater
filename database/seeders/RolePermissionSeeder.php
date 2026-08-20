@@ -27,6 +27,7 @@ class RolePermissionSeeder extends Seeder
             RoleEnum::Admin->value => [
                 PermissionEnum::DashboardView,
                 PermissionEnum::OrdersView,
+                PermissionEnum::OrdersConfirm,
                 PermissionEnum::OrdersAssign,
                 PermissionEnum::OrdersCancel,
                 PermissionEnum::DeliveriesUpdateStatus,
@@ -42,6 +43,7 @@ class RolePermissionSeeder extends Seeder
             RoleEnum::Customer->value => [
                 PermissionEnum::OrdersView,
                 PermissionEnum::OrdersCancel,
+                PermissionEnum::AddressesManage,
             ],
         ];
 

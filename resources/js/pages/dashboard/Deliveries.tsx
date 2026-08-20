@@ -3,6 +3,7 @@ import { MapPin, PackageCheck } from 'lucide-react';
 
 import DashboardLayout from '../../components/dashboard/DashboardLayout';
 import StatusBadge from '../../components/dashboard/StatusBadge';
+import { useDashboardRealtime } from '../../hooks/useDashboardRealtime';
 import { formatDateTime } from '../../lib/format';
 import { depart, deliver, fail } from '../../routes/dashboard/deliveries';
 
@@ -38,6 +39,10 @@ interface DeliveryPageProps {
 }
 
 export default function Deliveries({ active, history }: DeliveryPageProps) {
+    useDashboardRealtime({
+        events: ['delivery.status-changed', 'order.status-changed'],
+    });
+
     function markDepart(delivery: DeliveryItem) {
         router.post(depart.url({ delivery: delivery.uuid }));
     }

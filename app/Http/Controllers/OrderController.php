@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Enums\OrderStatus;
 use App\Enums\Permission;
 use App\Enums\TruckStatus;
+use App\Events\OrderStatusChanged;
 use App\Models\Delivery;
 use App\Models\Driver;
 use App\Models\Order;
@@ -71,6 +72,11 @@ class OrderController extends Controller
 
         $order->load(['user', 'delivery.truck', 'delivery.driver.user', 'items', 'payments']);
 
+        $order->setAttribute(
+            'payment_due_passed',
+            $order->payment_due_at !== null && $order->payment_due_at->isPast(),
+        );
+
         return Inertia::render('dashboard/orders/Show', [
             'order' => $order,
             'assignOptions' => [
@@ -114,6 +120,22 @@ class OrderController extends Controller
         return back()->with('success', 'Pengiriman ditugaskan dan pesanan dikonfirmasi.');
     }
 
+    public function confirm(Request $request, Order $order): RedirectResponse
+    {
+        if (! $order->status->is(OrderStatus::Pending)) {
+            return back()->with('error', 'Hanya pesanan berstatus menunggu yang dapat dikonfirmasi.');
+        }
+
+        $order->update([
+            'status' => OrderStatus::Confirmed,
+            'payment_due_at' => now()->addMinutes((int) config('midtrans.payment_timeout_minutes', 20)),
+        ]);
+
+        OrderStatusChanged::dispatch($order, OrderStatus::Pending);
+
+        return back()->with('success', 'Pesanan dikonfirmasi. Pelanggan kini dapat melakukan pembayaran.');
+    }
+
     public function cancel(Request $request, Order $order): RedirectResponse
     {
         $user = $request->user();
@@ -130,9 +152,13 @@ class OrderController extends Controller
             return back()->with('error', 'Pesanan sudah dibatalkan.');
         }
 
+        $previousStatus = $order->status;
+
         $order->update([
             'status' => OrderStatus::Cancelled,
         ]);
+
+        OrderStatusChanged::dispatch($order, $previousStatus);
 
         return back()->with('success', 'Pesanan dibatalkan.');
     }
