@@ -39,27 +39,50 @@ export function useDashboardRealtime(
     const timerRef = useRef<number | null>(null);
 
     useEffect(() => {
-        const channel = echo().private('dashboard');
+        const reloadWhenVisible = (): void => {
+            if (document.visibilityState === 'visible') {
+                router.reload();
+            }
+        };
 
-        const listeners = events.map((event) =>
-            channel.listen(event, (payload: DashboardRealtimeEvent) => {
-                if (orderId !== undefined && payload.order_id !== orderId) {
-                    return;
-                }
-
-                if (timerRef.current !== null) {
-                    window.clearTimeout(timerRef.current);
-                }
-
-                timerRef.current = window.setTimeout(() => {
-                    router.reload();
-                }, 500);
-            }),
-        );
+        window.addEventListener('focus', reloadWhenVisible);
+        document.addEventListener('visibilitychange', reloadWhenVisible);
 
         return () => {
-            listeners.forEach((listener, index) => {
-                channel.stopListening(events[index], listener);
+            window.removeEventListener('focus', reloadWhenVisible);
+            document.removeEventListener('visibilitychange', reloadWhenVisible);
+        };
+    }, []);
+
+    useEffect(() => {
+        const channel = echo().private('dashboard');
+
+        const handlers = events.map(
+            (event): [string, (payload: DashboardRealtimeEvent) => void] => [
+                event,
+                (payload) => {
+                    if (orderId !== undefined && payload.order_id !== orderId) {
+                        return;
+                    }
+
+                    if (timerRef.current !== null) {
+                        window.clearTimeout(timerRef.current);
+                    }
+
+                    timerRef.current = window.setTimeout(() => {
+                        router.reload();
+                    }, 500);
+                },
+            ],
+        );
+
+        handlers.forEach(([event, handler]) => {
+            channel.listen(event, handler);
+        });
+
+        return () => {
+            handlers.forEach(([event, handler]) => {
+                channel.stopListening(event, handler);
             });
         };
     }, [orderId, events]);

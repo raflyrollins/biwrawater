@@ -10,6 +10,7 @@ import Pagination from '../../../components/dashboard/Pagination';
 import type { PaginationLink } from '../../../components/dashboard/Pagination';
 import StatusBadge from '../../../components/dashboard/StatusBadge';
 import FieldError from '../../../components/public/FieldError';
+import { useConfirm } from '../../../components/ui/ConfirmDialog';
 import { STATUS_LABELS } from '../../../lib/labels';
 import { cn } from '../../../lib/utils';
 import {
@@ -259,12 +260,17 @@ export default function TrucksIndex({ trucks }: TrucksIndexProps) {
         router.post(toggleTruck.url({ truck: truck.uuid }));
     }
 
-    function destroy(truck: Truck) {
-        if (
-            window.confirm(
-                `Nonaktifkan armada ${truck.plate_number}? Status menjadi nonaktif.`,
-            )
-        ) {
+    const confirm = useConfirm();
+
+    async function destroy(truck: Truck) {
+        const confirmed = await confirm({
+            title: 'Nonaktifkan armada?',
+            description: `Armada ${truck.plate_number} akan berstatus nonaktif.`,
+            confirmLabel: 'Ya, Nonaktifkan',
+            tone: 'danger',
+        });
+
+        if (confirmed) {
             router.delete(destroyTruck.url({ truck: truck.uuid }));
         }
     }

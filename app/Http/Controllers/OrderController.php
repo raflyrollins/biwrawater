@@ -8,7 +8,6 @@ use App\Enums\OrderStatus;
 use App\Enums\Permission;
 use App\Enums\TruckStatus;
 use App\Events\OrderStatusChanged;
-use App\Models\Delivery;
 use App\Models\Driver;
 use App\Models\Order;
 use App\Models\Truck;
@@ -161,49 +160,5 @@ class OrderController extends Controller
         OrderStatusChanged::dispatch($order, $previousStatus);
 
         return back()->with('success', 'Pesanan dibatalkan.');
-    }
-
-    public function depart(Order $order, Delivery $delivery): RedirectResponse
-    {
-        $this->assertDeliveryBelongsToOrder($order, $delivery);
-
-        try {
-            $this->deliveryService->depart($delivery);
-        } catch (RuntimeException $e) {
-            return back()->with('error', $e->getMessage());
-        }
-
-        return back()->with('success', 'Pengiriman berangkat.');
-    }
-
-    public function deliver(Order $order, Delivery $delivery): RedirectResponse
-    {
-        $this->assertDeliveryBelongsToOrder($order, $delivery);
-
-        try {
-            $this->deliveryService->deliver($delivery);
-        } catch (RuntimeException $e) {
-            return back()->with('error', $e->getMessage());
-        }
-
-        return back()->with('success', 'Pengiriman selesai.');
-    }
-
-    public function fail(Order $order, Delivery $delivery): RedirectResponse
-    {
-        $this->assertDeliveryBelongsToOrder($order, $delivery);
-
-        try {
-            $this->deliveryService->fail($delivery);
-        } catch (RuntimeException $e) {
-            return back()->with('error', $e->getMessage());
-        }
-
-        return back()->with('success', 'Pengiriman ditandai gagal.');
-    }
-
-    private function assertDeliveryBelongsToOrder(Order $order, Delivery $delivery): void
-    {
-        abort_unless($delivery->order_id === $order->id, 404);
     }
 }

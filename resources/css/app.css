@@ -551,4 +551,51 @@
     .table tbody tr:last-child td {
         border-bottom: 0;
     }
+
+    /* Animations (toast & modal) */
+    @keyframes toast-in {
+        from {
+            opacity: 0;
+            transform: translateY(8px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes overlay-fade {
+        from {
+            opacity: 0;
+        }
+
+        to {
+            opacity: 1;
+        }
+    }
+
+    @keyframes modal-pop {
+        from {
+            opacity: 0;
+            transform: scale(0.97);
+        }
+
+        to {
+            opacity: 1;
+            transform: scale(1);
+        }
+    }
+
+    .animate-toast-in {
+        animation: toast-in 200ms ease-out;
+    }
+
+    .animate-overlay-fade {
+        animation: overlay-fade 150ms ease-out;
+    }
+
+    .animate-modal-pop {
+        animation: modal-pop 150ms ease-out;
+    }
 }

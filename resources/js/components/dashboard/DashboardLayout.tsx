@@ -1,6 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
 import {
-    CheckCircle2,
     LayoutDashboard,
     LogOut,
     MapPin,
@@ -9,8 +8,9 @@ import {
     Ticket,
     Truck,
     UserRound,
-    XCircle,
 } from 'lucide-react';
+
+import { useEffect } from 'react';
 
 import type { ReactNode } from 'react';
 
@@ -26,6 +26,7 @@ import { index as promotionsIndex } from '../../routes/dashboard/promotions';
 import { index as trucksIndex } from '../../routes/dashboard/trucks';
 import Logo from '../public/Logo';
 import ThemeToggle from '../public/ThemeToggle';
+import { useToast } from '../ui/Toast';
 
 interface NavItem {
     href: string;
@@ -161,6 +162,17 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         navItems.find((item) => isNavItemActive(item, url))?.label ??
         'Dashboard';
     const roleLabel = ROLE_LABELS[role] ?? 'Pengguna';
+    const { success: toastSuccess, error: toastError } = useToast();
+
+    useEffect(() => {
+        if (flash.success) {
+            toastSuccess(flash.success);
+        }
+
+        if (flash.error) {
+            toastError(flash.error);
+        }
+    }, [flash.success, flash.error, toastSuccess, toastError]);
 
     return (
         <div className="flex min-h-dvh">
@@ -299,35 +311,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                     </nav>
                 </header>
 
-                <main className="flex-1">
-                    {(flash.success || flash.error) && (
-                        <div className="container-dashboard mt-6">
-                            {flash.success && (
-                                <div
-                                    role="status"
-                                    className="flex items-center gap-2 border border-border-default bg-success-soft px-4 py-3 text-sm text-success-strong"
-                                >
-                                    <CheckCircle2
-                                        size={16}
-                                        aria-hidden="true"
-                                    />
-                                    {flash.success}
-                                </div>
-                            )}
-                            {flash.error && (
-                                <div
-                                    role="alert"
-                                    className="flex items-center gap-2 border border-border-default bg-danger-soft px-4 py-3 text-sm text-danger-strong"
-                                >
-                                    <XCircle size={16} aria-hidden="true" />
-                                    {flash.error}
-                                </div>
-                            )}
-                        </div>
-                    )}
-
-                    {children}
-                </main>
+                <main className="flex-1">{children}</main>
             </div>
         </div>
     );

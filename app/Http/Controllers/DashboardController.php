@@ -13,6 +13,7 @@ use App\Models\Order;
 use App\Models\PromoCode;
 use App\Models\Promotion;
 use App\Models\Truck;
+use App\Services\DeliveryService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -20,6 +21,8 @@ use Laravel\Head\Facades\Head;
 
 class DashboardController extends Controller
 {
+    public function __construct(private readonly DeliveryService $deliveryService) {}
+
     public function index(Request $request): Response
     {
         $user = $request->user();
@@ -95,22 +98,9 @@ class DashboardController extends Controller
     {
         Head::title('Jadwal Pengiriman');
 
-        $driverId = auth()->user()->driver->id;
-
-        return Inertia::render('dashboard/Deliveries', [
-            'active' => Delivery::query()
-                ->with(['order:id,order_number,address_snapshot,status', 'truck:id,name,plate_number'])
-                ->where('driver_id', $driverId)
-                ->whereIn('status', [DeliveryStatus::Scheduled, DeliveryStatus::OnTheWay])
-                ->orderBy('scheduled_at')
-                ->get(),
-            'history' => Delivery::query()
-                ->with(['order:id,order_number,status'])
-                ->where('driver_id', $driverId)
-                ->whereIn('status', [DeliveryStatus::Delivered, DeliveryStatus::Failed])
-                ->latest()
-                ->limit(10)
-                ->get(),
-        ]);
+        return Inertia::render(
+            'dashboard/Deliveries',
+            $this->deliveryService->scheduleFor(auth()->user()->driver),
+        );
     }
 }

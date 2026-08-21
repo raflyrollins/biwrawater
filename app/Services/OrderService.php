@@ -41,6 +41,41 @@ class OrderService
     }
 
     /**
+     * Validasi kode promo tanpa mencatat pemakaian; kembalikan pratinjau diskon.
+     *
+     * @return array{name: string, code: string, discount_type: string, discount_value: int, max_discount_amount: int|null, discount_total: int}
+     */
+    public function previewPromoCode(int $subtotal, string $promoCode): array
+    {
+        $code = $this->findActivePromoCode($promoCode);
+
+        if ($code === null) {
+            throw new RuntimeException('Kode promo tidak valid atau sudah kedaluwarsa.');
+        }
+
+        if ($subtotal < $code->min_order_total) {
+            throw new RuntimeException(sprintf(
+                'Kode promo berlaku untuk minimal pembelian Rp %s.',
+                number_format($code->min_order_total, 0, ',', '.'),
+            ));
+        }
+
+        return [
+            'name' => $code->name,
+            'code' => $code->code,
+            'discount_type' => $code->type->value,
+            'discount_value' => $code->value,
+            'max_discount_amount' => $code->max_discount_amount,
+            'discount_total' => $this->calculateDiscount(
+                $subtotal,
+                $code->type,
+                $code->value,
+                $code->max_discount_amount,
+            ),
+        ];
+    }
+
+    /**
      * Buat pesanan baru untuk pelanggan (1 pesanan = 1 tangki).
      *
      * Diskon: satu promosi otomatis terbaik (jika memenuhi minimal pembelian)
@@ -138,12 +173,9 @@ class OrderService
      */
     private function applyPromoCode(int $subtotal, string $promoCode, array &$discountBreakdown): int
     {
-        $code = PromoCode::query()
-            ->active()
-            ->where('code', strtoupper(trim($promoCode)))
-            ->first();
+        $code = $this->findActivePromoCode($promoCode);
 
-        if (! $code) {
+        if ($code === null) {
             throw new RuntimeException('Kode promo tidak valid atau sudah kedaluwarsa.');
         }
 
@@ -174,5 +206,13 @@ class OrderService
         ];
 
         return $codeDiscount;
+    }
+
+    private function findActivePromoCode(string $promoCode): ?PromoCode
+    {
+        return PromoCode::query()
+            ->active()
+            ->where('code', strtoupper(trim($promoCode)))
+            ->first();
     }
 }

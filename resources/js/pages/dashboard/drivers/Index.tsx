@@ -10,6 +10,7 @@ import Pagination from '../../../components/dashboard/Pagination';
 import type { PaginationLink } from '../../../components/dashboard/Pagination';
 import StatusBadge from '../../../components/dashboard/StatusBadge';
 import FieldError from '../../../components/public/FieldError';
+import { useConfirm } from '../../../components/ui/ConfirmDialog';
 import { STATUS_LABELS } from '../../../lib/labels';
 import { cn } from '../../../lib/utils';
 import {
@@ -314,12 +315,17 @@ export default function DriversIndex({ drivers }: DriversIndexProps) {
         router.post(toggleDriver.url({ driver: driver.uuid }));
     }
 
-    function destroy(driver: DriverItem) {
-        if (
-            window.confirm(
-                `Nonaktifkan driver ${driver.user.name}? Status menjadi istirahat.`,
-            )
-        ) {
+    const confirm = useConfirm();
+
+    async function destroy(driver: DriverItem) {
+        const confirmed = await confirm({
+            title: 'Nonaktifkan driver?',
+            description: `Driver ${driver.user.name} akan berstatus istirahat.`,
+            confirmLabel: 'Ya, Nonaktifkan',
+            tone: 'danger',
+        });
+
+        if (confirmed) {
             router.delete(destroyDriver.url({ driver: driver.uuid }));
         }
     }

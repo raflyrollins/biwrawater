@@ -1,11 +1,23 @@
 import { Head, router } from '@inertiajs/react';
-import { MapPin, PackageCheck } from 'lucide-react';
+import { Camera, MapPin, PackageCheck } from 'lucide-react';
+
+import { useState } from 'react';
 
 import DashboardLayout from '../../components/dashboard/DashboardLayout';
 import StatusBadge from '../../components/dashboard/StatusBadge';
+import { useConfirm } from '../../components/ui/ConfirmDialog';
 import { useDashboardRealtime } from '../../hooks/useDashboardRealtime';
 import { formatDateTime } from '../../lib/format';
-import { depart, deliver, fail } from '../../routes/dashboard/deliveries';
+import {
+    accept,
+    depart,
+    deliver,
+    fail,
+    fill,
+    reject,
+    unload,
+} from '../../routes/dashboard/deliveries';
+import photos from '../../routes/dashboard/deliveries/photos';
 
 interface DeliveryOrder {
     id: number;
@@ -22,15 +34,24 @@ interface DeliveryOrder {
     status: string;
 }
 
+interface DeliveryPhotoItem {
+    id: number;
+    type: string;
+    photo_url: string;
+}
+
 interface DeliveryItem {
     id: number;
     uuid: string;
     status: string;
     scheduled_at: string | null;
+    filling_started_at: string | null;
     departed_at: string | null;
     delivered_at: string | null;
+    note: string | null;
     order: DeliveryOrder;
     truck: { name: string; plate_number: string } | null;
+    photos?: DeliveryPhotoItem[];
 }
 
 interface DeliveryPageProps {
@@ -38,25 +59,246 @@ interface DeliveryPageProps {
     history: DeliveryItem[];
 }
 
+const PHOTO_LABELS: Record<string, string> = {
+    filling: 'Foto Pengisian (opsional)',
+    completion_tank: 'Foto Tangki (wajib)',
+    completion_person: 'Foto Penerima (wajib)',
+};
+
+function hasPhoto(delivery: DeliveryItem, type: string): boolean {
+    return (delivery.photos ?? []).some((photo) => photo.type === type);
+}
+
+interface PhotoUploadProps {
+    deliveryUuid: string;
+    type: string;
+    existing: DeliveryPhotoItem[];
+}
+
+function PhotoUpload({ deliveryUuid, type, existing }: PhotoUploadProps) {
+    const [file, setFile] = useState<File | null>(null);
+
+    function submit() {
+        if (!file) {
+            return;
+        }
+
+        router.post(photos.store.url({ delivery: deliveryUuid }), {
+            type,
+            photo: file,
+        });
+        setFile(null);
+    }
+
+    return (
+        <div className="rounded-sm bg-neutral-tertiary-soft p-4">
+            <p className="flex items-center gap-1.5 text-xs font-semibold text-heading">
+                <Camera
+                    size={14}
+                    aria-hidden="true"
+                    className="text-fg-brand"
+                />
+                {PHOTO_LABELS[type] ?? type}
+            </p>
+
+            {existing.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                    {existing.map((photo) => (
+                        <img
+                            key={photo.id}
+                            src={photo.photo_url}
+                            alt={PHOTO_LABELS[photo.type] ?? photo.type}
+                            className="h-20 w-20 border border-border-default object-cover"
+                        />
+                    ))}
+                </div>
+            )}
+
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+                <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(event) =>
+                        setFile(event.target.files?.[0] ?? null)
+                    }
+                    className="text-xs text-body file:mr-3 file:border-0 file:bg-neutral-primary-soft file:px-3 file:py-2 file:text-xs file:font-semibold file:text-heading"
+                />
+                <button
+                    type="button"
+                    onClick={submit}
+                    disabled={!file}
+                    className="btn btn-brand !px-3 !py-2 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                    Unggah
+                </button>
+            </div>
+        </div>
+    );
+}
+
 export default function Deliveries({ active, history }: DeliveryPageProps) {
     useDashboardRealtime({
-        events: ['delivery.status-changed', 'order.status-changed'],
+        events: ['.delivery.status-changed', '.order.status-changed'],
     });
 
-    function markDepart(delivery: DeliveryItem) {
-        router.post(depart.url({ delivery: delivery.uuid }));
+    const confirm = useConfirm();
+    const [pendingUrl, setPendingUrl] = useState<string | null>(null);
+
+    function act(url: string) {
+        if (pendingUrl !== null) {
+            return;
+        }
+
+        setPendingUrl(url);
+        router.post(url, undefined, { onFinish: () => setPendingUrl(null) });
     }
 
-    function markDeliver(delivery: DeliveryItem) {
-        if (window.confirm('Konfirmasi pengiriman selesai?')) {
-            router.post(deliver.url({ delivery: delivery.uuid }));
+    async function confirmAct(url: string, message: string) {
+        if (pendingUrl !== null) {
+            return;
+        }
+
+        const confirmed = await confirm({
+            title: 'Konfirmasi',
+            description: message,
+            confirmLabel: 'Ya, Lanjutkan',
+        });
+
+        if (confirmed) {
+            act(url);
         }
     }
 
-    function markFail(delivery: DeliveryItem) {
-        if (window.confirm('Tandai pengiriman ini gagal?')) {
-            router.post(fail.url({ delivery: delivery.uuid }));
+    function renderActions(delivery: DeliveryItem) {
+        if (delivery.status === 'scheduled') {
+            return (
+                <>
+                    <button
+                        type="button"
+                        onClick={() =>
+                            act(accept.url({ delivery: delivery.uuid }))
+                        }
+                        disabled={pendingUrl !== null}
+                        className="btn btn-brand flex-1 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        Terima Tugas
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() =>
+                            confirmAct(
+                                reject.url({ delivery: delivery.uuid }),
+                                'Tolak tugas pengiriman ini? Pesanan akan dikembalikan ke admin.',
+                            )
+                        }
+                        disabled={pendingUrl !== null}
+                        className="border border-danger-strong px-4 py-3 text-sm font-semibold text-danger-strong transition-colors hover:bg-danger-soft disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        Tolak
+                    </button>
+                </>
+            );
         }
+
+        if (delivery.status === 'accepted') {
+            return (
+                <button
+                    type="button"
+                    onClick={() => act(fill.url({ delivery: delivery.uuid }))}
+                    disabled={pendingUrl !== null}
+                    className="btn btn-brand flex-1 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                    Mulai Pengisian Air
+                </button>
+            );
+        }
+
+        if (delivery.status === 'filling') {
+            return (
+                <button
+                    type="button"
+                    onClick={() => act(depart.url({ delivery: delivery.uuid }))}
+                    disabled={pendingUrl !== null}
+                    className="btn btn-brand flex-1 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                    Mulai Perjalanan
+                </button>
+            );
+        }
+
+        if (delivery.status === 'on_the_way') {
+            return (
+                <>
+                    <button
+                        type="button"
+                        onClick={() =>
+                            act(unload.url({ delivery: delivery.uuid }))
+                        }
+                        disabled={pendingUrl !== null}
+                        className="btn btn-brand flex-1 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        Mulai Penurunan
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() =>
+                            confirmAct(
+                                fail.url({ delivery: delivery.uuid }),
+                                'Tandai pengiriman ini gagal?',
+                            )
+                        }
+                        disabled={pendingUrl !== null}
+                        className="border border-danger-strong px-4 py-3 text-sm font-semibold text-danger-strong transition-colors hover:bg-danger-soft disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        Gagal
+                    </button>
+                </>
+            );
+        }
+
+        if (delivery.status === 'unloading') {
+            const ready =
+                hasPhoto(delivery, 'completion_tank') &&
+                hasPhoto(delivery, 'completion_person');
+
+            return (
+                <>
+                    <button
+                        type="button"
+                        onClick={() =>
+                            confirmAct(
+                                deliver.url({ delivery: delivery.uuid }),
+                                'Konfirmasi pengiriman selesai?',
+                            )
+                        }
+                        disabled={!ready || pendingUrl !== null}
+                        title={
+                            ready
+                                ? undefined
+                                : 'Unggah foto tangki dan foto penerima terlebih dahulu.'
+                        }
+                        className="btn btn-brand flex-1 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        Pengiriman Selesai
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() =>
+                            confirmAct(
+                                fail.url({ delivery: delivery.uuid }),
+                                'Tandai pengiriman ini gagal?',
+                            )
+                        }
+                        disabled={pendingUrl !== null}
+                        className="border border-danger-strong px-4 py-3 text-sm font-semibold text-danger-strong transition-colors hover:bg-danger-soft disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        Gagal
+                    </button>
+                </>
+            );
+        }
+
+        return null;
     }
 
     return (
@@ -66,7 +308,8 @@ export default function Deliveries({ active, history }: DeliveryPageProps) {
             <div className="container-dashboard py-8 md:py-12">
                 <h2 className="mb-1 text-2xl text-heading">Pengiriman Aktif</h2>
                 <p className="mb-8 text-sm text-body-subtle">
-                    Tugas yang sedang berjalan.
+                    Terima tugas, isi air, berangkat, turunkan, lalu unggah foto
+                    bukti sebelum menyelesaikan pengiriman.
                 </p>
 
                 {active.length === 0 ? (
@@ -153,38 +396,64 @@ export default function Deliveries({ active, history }: DeliveryPageProps) {
                                     </span>
                                 </div>
 
-                                <div className="mt-5 flex flex-wrap gap-3">
-                                    {delivery.status === 'scheduled' && (
-                                        <button
-                                            type="button"
-                                            onClick={() => markDepart(delivery)}
-                                            className="btn btn-brand flex-1"
-                                        >
-                                            Mulai Perjalanan
-                                        </button>
-                                    )}
-                                    {delivery.status === 'on_the_way' && (
-                                        <>
-                                            <button
-                                                type="button"
-                                                onClick={() =>
-                                                    markDeliver(delivery)
-                                                }
-                                                className="btn btn-brand flex-1"
-                                            >
-                                                Pengiriman Selesai
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() =>
-                                                    markFail(delivery)
-                                                }
-                                                className="border border-danger-strong px-4 py-3 text-sm font-semibold text-danger-strong transition-colors hover:bg-danger-soft"
-                                            >
-                                                Gagal
-                                            </button>
-                                        </>
-                                    )}
+                                {(delivery.status === 'filling' ||
+                                    delivery.status === 'unloading') && (
+                                    <div className="mt-4 space-y-3">
+                                        {delivery.status === 'filling' && (
+                                            <PhotoUpload
+                                                deliveryUuid={delivery.uuid}
+                                                type="filling"
+                                                existing={(
+                                                    delivery.photos ?? []
+                                                ).filter(
+                                                    (photo) =>
+                                                        photo.type ===
+                                                        'filling',
+                                                )}
+                                            />
+                                        )}
+                                        {delivery.status === 'unloading' && (
+                                            <>
+                                                <PhotoUpload
+                                                    deliveryUuid={delivery.uuid}
+                                                    type="completion_tank"
+                                                    existing={(
+                                                        delivery.photos ?? []
+                                                    ).filter(
+                                                        (photo) =>
+                                                            photo.type ===
+                                                            'completion_tank',
+                                                    )}
+                                                />
+                                                <PhotoUpload
+                                                    deliveryUuid={delivery.uuid}
+                                                    type="completion_person"
+                                                    existing={(
+                                                        delivery.photos ?? []
+                                                    ).filter(
+                                                        (photo) =>
+                                                            photo.type ===
+                                                            'completion_person',
+                                                    )}
+                                                />
+                                            </>
+                                        )}
+                                    </div>
+                                )}
+
+                                {delivery.note && (
+                                    <p className="mt-4 text-sm text-body">
+                                        <span className="font-semibold text-heading">
+                                            Catatan:{' '}
+                                        </span>
+                                        {delivery.note}
+                                    </p>
+                                )}
+
+                                <div className="mt-auto pt-5">
+                                    <div className="flex flex-wrap gap-3">
+                                        {renderActions(delivery)}
+                                    </div>
                                 </div>
                             </div>
                         ))}

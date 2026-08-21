@@ -2,17 +2,18 @@ import { createInertiaApp } from '@inertiajs/react';
 import { configureEcho } from '@laravel/echo-react';
 import { createRoot } from 'react-dom/client';
 
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { ConfirmProvider } from './components/ui/ConfirmDialog';
+import { ToastProvider } from './components/ui/Toast';
 import { ThemeProvider } from './hooks/useTheme';
 import type { StoredTheme } from './hooks/useTheme';
 
 configureEcho({
     broadcaster: 'reverb',
     key: import.meta.env.VITE_REVERB_APP_KEY,
-    wsHost: import.meta.env.VITE_REVERB_HOST,
-    wsPort: import.meta.env.VITE_REVERB_PORT,
-    wssPort: import.meta.env.VITE_REVERB_PORT,
-    forceTLS: (import.meta.env.VITE_REVERB_SCHEME ?? 'https') === 'https',
-    enabledTransports: ['ws', 'wss'],
+    host: import.meta.env.VITE_REVERB_HOST ?? 'localhost',
+    port: Number(import.meta.env.VITE_REVERB_PORT ?? 8080),
+    scheme: import.meta.env.VITE_REVERB_SCHEME ?? 'http',
     namespace: '',
 });
 
@@ -26,9 +27,15 @@ createInertiaApp({
             StoredTheme | undefined;
 
         const app = (
-            <ThemeProvider appearance={appearance ?? 'system'}>
-                <App {...props} />
-            </ThemeProvider>
+            <ErrorBoundary>
+                <ThemeProvider appearance={appearance ?? 'system'}>
+                    <ToastProvider>
+                        <ConfirmProvider>
+                            <App {...props} />
+                        </ConfirmProvider>
+                    </ToastProvider>
+                </ThemeProvider>
+            </ErrorBoundary>
         );
 
         if (!el) {

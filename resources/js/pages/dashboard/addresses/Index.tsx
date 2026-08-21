@@ -7,6 +7,7 @@ import type { FormEvent } from 'react';
 
 import DashboardLayout from '../../../components/dashboard/DashboardLayout';
 import FieldError from '../../../components/public/FieldError';
+import { useConfirm } from '../../../components/ui/ConfirmDialog';
 import { cn } from '../../../lib/utils';
 import {
     destroy as destroyAddress,
@@ -371,8 +372,17 @@ export default function AddressesIndex({ addresses }: AddressesIndexProps) {
         });
     }
 
-    function destroy(address: Address) {
-        if (window.confirm(`Hapus alamat "${address.label}"?`)) {
+    const confirm = useConfirm();
+
+    async function destroy(address: Address) {
+        const confirmed = await confirm({
+            title: 'Hapus alamat?',
+            description: `Alamat "${address.label}" akan dihapus.`,
+            confirmLabel: 'Ya, Hapus',
+            tone: 'danger',
+        });
+
+        if (confirmed) {
             router.delete(destroyAddress.url({ address: address.id }));
         }
     }

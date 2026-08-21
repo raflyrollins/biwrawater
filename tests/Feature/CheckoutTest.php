@@ -143,3 +143,59 @@ test('alamat milik orang lain ditolak saat checkout', function () {
         ])
         ->assertNotFound();
 });
+
+test('cek kupon valid mengembalikan pratinjau diskon tanpa mencatat pemakaian', function () {
+    $user = User::factory()->create();
+    $service = Service::factory()->create(['price' => 200000]);
+    $promo = PromoCode::factory()->create([
+        'type' => DiscountType::Percentage,
+        'value' => 10,
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('checkout.promo'), [
+            'service_id' => $service->id,
+            'promo_code' => strtolower($promo->code),
+        ])
+        ->assertRedirect()
+        ->assertSessionHas('promo_preview', function (array $preview) use ($promo) {
+            expect($preview['code'])->toBe($promo->code)
+                ->and($preview['discount_total'])->toBe(20000);
+
+            return true;
+        });
+
+    expect($promo->refresh()->used_count)->toBe(0)
+        ->and($user->orders()->count())->toBe(0);
+});
+
+test('cek kupon tidak valid menampilkan pesan error', function () {
+    $user = User::factory()->create();
+    $service = Service::factory()->create();
+
+    $this->actingAs($user)
+        ->post(route('checkout.promo'), [
+            'service_id' => $service->id,
+            'promo_code' => 'TIDAKADA',
+        ])
+        ->assertRedirect()
+        ->assertSessionHasErrors('promo_code');
+});
+
+test('cek kupon di bawah minimal pembelian ditolak', function () {
+    $user = User::factory()->create();
+    $service = Service::factory()->create(['price' => 200000]);
+    $promo = PromoCode::factory()->create([
+        'type' => DiscountType::Fixed,
+        'value' => 25000,
+        'min_order_total' => 500000,
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('checkout.promo'), [
+            'service_id' => $service->id,
+            'promo_code' => $promo->code,
+        ])
+        ->assertRedirect()
+        ->assertSessionHasErrors('promo_code');
+});

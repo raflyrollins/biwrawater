@@ -1,7 +1,12 @@
 <?php
 
+use App\Enums\DeliveryStatus;
+use App\Enums\OrderStatus;
+use App\Enums\PaymentStatus;
+use App\Models\Delivery;
 use App\Models\Driver;
 use App\Models\Order;
+use App\Models\Truck;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -105,6 +110,28 @@ test('driver dapat mengakses jadwal pengiriman', function () {
         ->get('/dashboard/deliveries')
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page->component('dashboard/Deliveries'));
+});
+
+test('pengiriman yang sudah diterima driver tetap tampil di dashboard', function () {
+    $user = User::factory()->driver()->create();
+    $driver = Driver::factory()->for($user)->create();
+    $order = Order::factory()->create([
+        'status' => OrderStatus::Confirmed,
+        'payment_status' => PaymentStatus::Paid,
+    ]);
+    Delivery::factory()->for($order)->for(Truck::factory()->create())->for($driver)->create([
+        'status' => DeliveryStatus::Accepted,
+        'scheduled_at' => now()->addHour(),
+    ]);
+
+    $this->actingAs($user)
+        ->get('/dashboard')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('dashboard/Deliveries')
+            ->has('active', 1)
+            ->where('active.0.status', DeliveryStatus::Accepted->value)
+            ->has('history', 0));
 });
 
 test('driver tidak dapat mengakses daftar pesanan', function () {

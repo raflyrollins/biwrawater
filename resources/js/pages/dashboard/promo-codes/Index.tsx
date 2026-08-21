@@ -9,6 +9,7 @@ import DashboardLayout from '../../../components/dashboard/DashboardLayout';
 import Pagination from '../../../components/dashboard/Pagination';
 import type { PaginationLink } from '../../../components/dashboard/Pagination';
 import FieldError from '../../../components/public/FieldError';
+import { useConfirm } from '../../../components/ui/ConfirmDialog';
 import DatePicker from '../../../components/ui/DatePicker';
 import { combineDateTime, splitDateTime } from '../../../lib/date';
 import { formatDate, formatRupiah } from '../../../lib/format';
@@ -468,8 +469,17 @@ export default function PromoCodesIndex({ promoCodes }: PromoCodesIndexProps) {
         router.post(togglePromoCode.url({ promoCode: promoCode.uuid }));
     }
 
-    function destroy(promoCode: PromoCode) {
-        if (window.confirm(`Hapus kode promo ${promoCode.code}?`)) {
+    const confirm = useConfirm();
+
+    async function destroy(promoCode: PromoCode) {
+        const confirmed = await confirm({
+            title: 'Hapus kode promo?',
+            description: `Kode promo ${promoCode.code} akan dihapus.`,
+            confirmLabel: 'Ya, Hapus',
+            tone: 'danger',
+        });
+
+        if (confirmed) {
             router.delete(destroyPromoCode.url({ promoCode: promoCode.uuid }));
         }
     }

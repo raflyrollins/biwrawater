@@ -1,5 +1,11 @@
-import { Head, Link, useForm } from '@inertiajs/react';
-import { ArrowLeft, MapPin, ShieldCheck, Truck } from 'lucide-react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
+import {
+    ArrowLeft,
+    CheckCircle2,
+    MapPin,
+    ShieldCheck,
+    Truck,
+} from 'lucide-react';
 
 import { useState } from 'react';
 
@@ -9,7 +15,10 @@ import FieldError from '../components/public/FieldError';
 import { formatRupiah } from '../lib/format';
 import { cn } from '../lib/utils';
 import { home } from '../routes';
-import { store as checkoutStore } from '../routes/checkout';
+import {
+    promo as checkoutPromo,
+    store as checkoutStore,
+} from '../routes/checkout';
 
 interface Service {
     id: number;
@@ -42,10 +51,20 @@ interface Promotion {
     min_order_total: number;
 }
 
+interface PromoPreview {
+    name: string;
+    code: string;
+    discount_type: 'percentage' | 'fixed';
+    discount_value: number;
+    max_discount_amount: number | null;
+    discount_total: number;
+}
+
 interface CheckoutProps {
     services: Service[];
     addresses: Address[];
     promotions: Promotion[];
+    promo_preview?: PromoPreview | null;
 }
 
 interface CheckoutFormValues {
@@ -80,6 +99,7 @@ export default function Checkout({
     services,
     addresses,
     promotions,
+    promo_preview,
 }: CheckoutProps) {
     const { data, setData, errors, processing, post } =
         useForm<CheckoutFormValues>({
@@ -95,7 +115,11 @@ export default function Checkout({
 
     function toggleAddressMode() {
         setUsingNewAddress((value) => {
-            setData('address_id', value ? (addresses[0] ? String(addresses[0].id) : '') : '');
+            setData(
+                'address_id',
+                value ? (addresses[0] ? String(addresses[0].id) : '') : '',
+            );
+
             return !value;
         });
     }
@@ -103,6 +127,29 @@ export default function Checkout({
     const selectedService =
         services.find((service) => String(service.id) === data.service_id) ??
         null;
+
+    const appliedPromo =
+        promo_preview && promo_preview.code === data.promo_code.trim()
+            ? promo_preview
+            : null;
+    const grandTotal = selectedService
+        ? selectedService.price - (appliedPromo?.discount_total ?? 0)
+        : 0;
+
+    function checkPromo() {
+        if (!selectedService || data.promo_code.trim() === '') {
+            return;
+        }
+
+        router.post(
+            checkoutPromo.url(),
+            {
+                service_id: data.service_id,
+                promo_code: data.promo_code,
+            },
+            { preserveScroll: true, preserveState: true },
+        );
+    }
 
     function submit(e: FormEvent) {
         e.preventDefault();
@@ -204,9 +251,7 @@ export default function Checkout({
                                 {addresses.length > 0 && (
                                     <button
                                         type="button"
-                                        onClick={() =>
-                                            toggleAddressMode()
-                                        }
+                                        onClick={() => toggleAddressMode()}
                                         className="text-sm font-semibold text-fg-brand no-underline hover:text-fg-brand-strong"
                                     >
                                         {usingNewAddress
@@ -426,7 +471,14 @@ export default function Checkout({
                                                     e.target.value,
                                                 )
                                             }
-                                            className="input"
+                                            className={cn(
+                                                'input',
+                                                errors.subdistrict &&
+                                                    'input-error',
+                                            )}
+                                        />
+                                        <FieldError
+                                            message={errors.subdistrict}
                                         />
                                     </div>
                                     <div>
@@ -467,7 +519,14 @@ export default function Checkout({
                                                     e.target.value,
                                                 )
                                             }
-                                            className="input"
+                                            className={cn(
+                                                'input',
+                                                errors.postal_code &&
+                                                    'input-error',
+                                            )}
+                                        />
+                                        <FieldError
+                                            message={errors.postal_code}
                                         />
                                     </div>
                                     <div className="sm:col-span-2">
@@ -484,9 +543,13 @@ export default function Checkout({
                                             onChange={(e) =>
                                                 setData('notes', e.target.value)
                                             }
-                                            className="input"
+                                            className={cn(
+                                                'input',
+                                                errors.notes && 'input-error',
+                                            )}
                                             placeholder="cth: dekat masjid, gerbang kuning"
                                         />
+                                        <FieldError message={errors.notes} />
                                     </div>
                                 </div>
                             )}
@@ -507,9 +570,13 @@ export default function Checkout({
                                 onChange={(e) =>
                                     setData('customer_note', e.target.value)
                                 }
-                                className="input mt-4 min-h-24"
+                                className={cn(
+                                    'input mt-4 min-h-24',
+                                    errors.customer_note && 'input-error',
+                                )}
                                 placeholder="Catatan untuk admin atau driver"
                             />
+                            <FieldError message={errors.customer_note} />
                         </section>
                     </div>
 
@@ -540,13 +607,27 @@ export default function Checkout({
                                             : '-'}
                                     </span>
                                 </div>
+                                {appliedPromo && (
+                                    <div className="flex justify-between gap-3">
+                                        <span className="text-body-subtle">
+                                            Diskon kupon{' '}
+                                            <span className="font-mono">
+                                                {appliedPromo.code}
+                                            </span>
+                                        </span>
+                                        <span className="font-semibold text-success-strong">
+                                            -
+                                            {formatRupiah(
+                                                appliedPromo.discount_total,
+                                            )}
+                                        </span>
+                                    </div>
+                                )}
                                 <div className="flex justify-between gap-3 border-t border-border-default pt-3 text-base font-bold">
                                     <span className="text-heading">Total</span>
                                     <span className="text-heading">
                                         {selectedService
-                                            ? formatRupiah(
-                                                  selectedService.price,
-                                              )
+                                            ? formatRupiah(grandTotal)
                                             : '-'}
                                     </span>
                                 </div>
@@ -559,22 +640,64 @@ export default function Checkout({
                                 >
                                     Kode Promo
                                 </label>
-                                <input
-                                    id="promo-code"
-                                    type="text"
-                                    value={data.promo_code}
-                                    onChange={(e) =>
-                                        setData(
-                                            'promo_code',
-                                            e.target.value.toUpperCase(),
-                                        )
-                                    }
-                                    className={cn(
-                                        'input font-mono uppercase',
-                                        errors.promo_code && 'input-error',
-                                    )}
-                                    placeholder="cth: BWR10"
-                                />
+                                <div className="flex gap-2">
+                                    <input
+                                        id="promo-code"
+                                        type="text"
+                                        value={data.promo_code}
+                                        onChange={(e) =>
+                                            setData(
+                                                'promo_code',
+                                                e.target.value.toUpperCase(),
+                                            )
+                                        }
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                checkPromo();
+                                            }
+                                        }}
+                                        className={cn(
+                                            'input min-w-0 flex-1 font-mono uppercase',
+                                            errors.promo_code && 'input-error',
+                                        )}
+                                        placeholder="cth: BWR10"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={checkPromo}
+                                        disabled={
+                                            processing ||
+                                            !selectedService ||
+                                            data.promo_code.trim() === ''
+                                        }
+                                        className="btn btn-white shrink-0"
+                                    >
+                                        Cek Kupon
+                                    </button>
+                                </div>
+                                {appliedPromo && !errors.promo_code && (
+                                    <div
+                                        role="status"
+                                        className="mt-2 flex items-start gap-2 border border-border-default bg-success-soft px-3 py-2 text-sm leading-5 text-success-strong"
+                                    >
+                                        <CheckCircle2
+                                            size={16}
+                                            className="mt-0.5 shrink-0"
+                                            aria-hidden="true"
+                                        />
+                                        <span>
+                                            Kupon{' '}
+                                            <span className="font-mono font-semibold">
+                                                {appliedPromo.code}
+                                            </span>{' '}
+                                            aktif — hemat{' '}
+                                            {formatRupiah(
+                                                appliedPromo.discount_total,
+                                            )}
+                                        </span>
+                                    </div>
+                                )}
                                 <FieldError message={errors.promo_code} />
                             </div>
 

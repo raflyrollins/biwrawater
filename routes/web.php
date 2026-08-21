@@ -26,6 +26,7 @@ Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->n
 
 Route::middleware('auth')->group(function (): void {
     Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
+    Route::post('/checkout/promo', [CheckoutController::class, 'validatePromo'])->name('checkout.promo');
     Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
 });
 
@@ -48,14 +49,16 @@ Route::middleware(['auth', 'permission:orders.view|deliveries.view|dashboard.vie
         Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel'])->middleware('permission:orders.cancel')->name('orders.cancel');
         Route::post('/orders/{order}/pay', [PaymentController::class, 'pay'])->middleware('permission:orders.view')->name('orders.pay');
         Route::get('/orders/{order}/pay-status', [PaymentController::class, 'status'])->middleware('permission:orders.view')->name('orders.pay-status');
-        Route::post('/orders/{order}/delivery/{delivery}/depart', [OrderController::class, 'depart'])->middleware('permission:deliveries.update-status')->name('orders.delivery.depart');
-        Route::post('/orders/{order}/delivery/{delivery}/deliver', [OrderController::class, 'deliver'])->middleware('permission:deliveries.update-status')->name('orders.delivery.deliver');
-        Route::post('/orders/{order}/delivery/{delivery}/fail', [OrderController::class, 'fail'])->middleware('permission:deliveries.update-status')->name('orders.delivery.fail');
 
         Route::get('/deliveries', [DeliveryController::class, 'index'])->middleware('permission:deliveries.view')->name('deliveries.index');
+        Route::post('/deliveries/{delivery}/accept', [DeliveryController::class, 'accept'])->middleware('permission:deliveries.update-status')->name('deliveries.accept');
+        Route::post('/deliveries/{delivery}/reject', [DeliveryController::class, 'reject'])->middleware('permission:deliveries.update-status')->name('deliveries.reject');
+        Route::post('/deliveries/{delivery}/fill', [DeliveryController::class, 'fill'])->middleware('permission:deliveries.update-status')->name('deliveries.fill');
         Route::post('/deliveries/{delivery}/depart', [DeliveryController::class, 'depart'])->middleware('permission:deliveries.update-status')->name('deliveries.depart');
+        Route::post('/deliveries/{delivery}/unload', [DeliveryController::class, 'unload'])->middleware('permission:deliveries.update-status')->name('deliveries.unload');
         Route::post('/deliveries/{delivery}/deliver', [DeliveryController::class, 'deliver'])->middleware('permission:deliveries.update-status')->name('deliveries.deliver');
         Route::post('/deliveries/{delivery}/fail', [DeliveryController::class, 'fail'])->middleware('permission:deliveries.update-status')->name('deliveries.fail');
+        Route::post('/deliveries/{delivery}/photos', [DeliveryController::class, 'storePhoto'])->middleware('permission:deliveries.update-status')->name('deliveries.photos.store');
 
         Route::middleware('permission:promotions.manage')->group(function (): void {
             Route::get('/promotions', [PromotionController::class, 'index'])->name('promotions.index');

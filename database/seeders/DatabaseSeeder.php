@@ -58,6 +58,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             ServiceSeeder::class,
             TruckSeeder::class,
+            PromoCodeSeeder::class,
         ]);
     }
 }

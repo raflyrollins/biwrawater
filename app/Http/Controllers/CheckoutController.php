@@ -30,7 +30,38 @@ class CheckoutController extends Controller
                 ->get(),
             'addresses' => $request->user()->addresses()->latest()->get(),
             'promotions' => Promotion::query()->active()->orderByDesc('value')->get(),
+            'promo_preview' => fn () => $request->session()->get('promo_preview'),
         ]);
+    }
+
+    public function validatePromo(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'service_id' => ['required', 'integer', 'exists:services,id'],
+            'promo_code' => ['required', 'string', 'max:100'],
+        ]);
+
+        $service = Service::query()
+            ->active()
+            ->whereKey((int) $validated['service_id'])
+            ->first();
+
+        if ($service === null) {
+            return back()->withErrors([
+                'promo_code' => 'Varian tangki tidak tersedia.',
+            ]);
+        }
+
+        try {
+            $preview = $this->orderService->previewPromoCode(
+                $service->price,
+                $validated['promo_code'],
+            );
+        } catch (RuntimeException $e) {
+            return back()->withErrors(['promo_code' => $e->getMessage()]);
+        }
+
+        return back()->with('promo_preview', $preview);
     }
 
     public function store(Request $request): RedirectResponse

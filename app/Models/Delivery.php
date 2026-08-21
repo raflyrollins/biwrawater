@@ -5,9 +5,11 @@ namespace App\Models;
 use App\Enums\DeliveryStatus;
 use Database\Factories\DeliveryFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 use Ramsey\Uuid\Uuid;
 
@@ -19,6 +21,7 @@ use Ramsey\Uuid\Uuid;
  * @property int|null $driver_id
  * @property DeliveryStatus $status
  * @property Carbon $scheduled_at
+ * @property Carbon|null $filling_started_at
  * @property Carbon|null $departed_at
  * @property Carbon|null $delivered_at
  * @property string|null $note
@@ -53,6 +56,37 @@ class Delivery extends Model
     }
 
     /**
+     * Pengiriman yang sedang berjalan (belum selesai/gagal).
+     *
+     * @param  Builder<self>  $query
+     * @return Builder<self>
+     */
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->whereIn('status', [
+            DeliveryStatus::Scheduled,
+            DeliveryStatus::Accepted,
+            DeliveryStatus::Filling,
+            DeliveryStatus::OnTheWay,
+            DeliveryStatus::Unloading,
+        ]);
+    }
+
+    /**
+     * Pengiriman yang sudah berakhir.
+     *
+     * @param  Builder<self>  $query
+     * @return Builder<self>
+     */
+    public function scopeHistory(Builder $query): Builder
+    {
+        return $query->whereIn('status', [
+            DeliveryStatus::Delivered,
+            DeliveryStatus::Failed,
+        ]);
+    }
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
@@ -62,6 +96,7 @@ class Delivery extends Model
         return [
             'status' => DeliveryStatus::class,
             'scheduled_at' => 'datetime',
+            'filling_started_at' => 'datetime',
             'departed_at' => 'datetime',
             'delivered_at' => 'datetime',
         ];
@@ -89,5 +124,13 @@ class Delivery extends Model
     public function driver(): BelongsTo
     {
         return $this->belongsTo(Driver::class);
+    }
+
+    /**
+     * @return HasMany<DeliveryPhoto, $this>
+     */
+    public function photos(): HasMany
+    {
+        return $this->hasMany(DeliveryPhoto::class);
     }
 }

@@ -1,7 +1,7 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { ArrowLeft, Clock } from 'lucide-react';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 import AssignDeliveryForm from '../../../components/dashboard/AssignDeliveryForm';
 import type {
@@ -10,6 +10,7 @@ import type {
 } from '../../../components/dashboard/AssignDeliveryForm';
 import DashboardLayout from '../../../components/dashboard/DashboardLayout';
 import StatusBadge from '../../../components/dashboard/StatusBadge';
+import { useConfirm } from '../../../components/ui/ConfirmDialog';
 import { useDashboardRealtime } from '../../../hooks/useDashboardRealtime';
 import { formatDateTime, formatRupiah } from '../../../lib/format';
 import { openSnapPayment } from '../../../lib/midtrans';
@@ -21,11 +22,6 @@ import {
     pay as ordersPay,
     payStatus as ordersPayStatus,
 } from '../../../routes/dashboard/orders';
-import {
-    depart,
-    deliver,
-    fail,
-} from '../../../routes/dashboard/orders/delivery';
 
 interface OrderItem {
     service_name: string;
@@ -97,6 +93,16 @@ export default function OrderShow({ order, assignOptions }: OrderShowProps) {
     const delivery = order.delivery;
     const permissions = new Set(auth.permissions);
     const isAdmin = permissions.has('dashboard.view');
+    const [pendingAction, setPendingAction] = useState(false);
+    const hasActiveDelivery =
+        delivery !== null &&
+        [
+            'scheduled',
+            'accepted',
+            'filling',
+            'on_the_way',
+            'unloading',
+        ].includes(delivery.status);
 
     useDashboardRealtime({ orderId: order.id });
 
@@ -129,12 +135,31 @@ export default function OrderShow({ order, assignOptions }: OrderShowProps) {
     }, [snap]);
 
     function action(url: string) {
-        router.post(url);
+        if (pendingAction) {
+            return;
+        }
+
+        setPendingAction(true);
+        router.post(url, undefined, {
+            onFinish: () => setPendingAction(false),
+        });
     }
 
-    function confirmAction(url: string, message: string) {
-        if (window.confirm(message)) {
-            router.post(url);
+    const confirm = useConfirm();
+
+    async function confirmAction(url: string, message: string) {
+        if (pendingAction) {
+            return;
+        }
+
+        const confirmed = await confirm({
+            title: 'Konfirmasi',
+            description: message,
+            confirmLabel: 'Ya, Lanjutkan',
+        });
+
+        if (confirmed) {
+            action(url);
         }
     }
 
@@ -203,7 +228,8 @@ export default function OrderShow({ order, assignOptions }: OrderShowProps) {
                                                 `Konfirmasi pesanan ${order.order_number}?`,
                                             )
                                         }
-                                        className="btn btn-brand mt-5"
+                                        disabled={pendingAction}
+                                        className="btn btn-brand mt-5 disabled:cursor-not-allowed disabled:opacity-50"
                                     >
                                         Konfirmasi Pesanan
                                     </button>
@@ -213,12 +239,29 @@ export default function OrderShow({ order, assignOptions }: OrderShowProps) {
                         {/* Assign form / delivery status */}
                         {order.status === 'confirmed' &&
                             order.payment_status === 'paid' &&
-                            permissions.has('orders.assign') && (
+                            permissions.has('orders.assign') &&
+                            !hasActiveDelivery && (
                                 <AssignDeliveryForm
                                     orderUuid={order.uuid}
                                     trucks={assignOptions.trucks}
                                     drivers={assignOptions.drivers}
                                 />
+                            )}
+
+                        {order.status === 'confirmed' &&
+                            order.payment_status === 'paid' &&
+                            permissions.has('orders.assign') &&
+                            hasActiveDelivery && (
+                                <div className="card p-6">
+                                    <p className="label-caps text-body-subtle">
+                                        Penugasan
+                                    </p>
+                                    <p className="mt-4 text-sm leading-relaxed text-body">
+                                        Pengiriman sedang berjalan. Selesaikan
+                                        atau gagalkan pengiriman saat ini
+                                        sebelum menugaskan ulang.
+                                    </p>
+                                </div>
                             )}
 
                         {delivery ? (
@@ -278,66 +321,6 @@ export default function OrderShow({ order, assignOptions }: OrderShowProps) {
                                         </span>
                                         {delivery.note}
                                     </p>
-                                )}
-
-                                {permissions.has(
-                                    'deliveries.update-status',
-                                ) && (
-                                    <div className="mt-6 flex flex-wrap gap-3">
-                                        {delivery.status === 'scheduled' && (
-                                            <button
-                                                type="button"
-                                                onClick={() =>
-                                                    action(
-                                                        depart.url({
-                                                            order: order.uuid,
-                                                            delivery:
-                                                                delivery.uuid,
-                                                        }),
-                                                    )
-                                                }
-                                                className="btn btn-brand"
-                                            >
-                                                Tandai Berangkat
-                                            </button>
-                                        )}
-                                        {delivery.status === 'on_the_way' && (
-                                            <>
-                                                <button
-                                                    type="button"
-                                                    onClick={() =>
-                                                        confirmAction(
-                                                            deliver.url({
-                                                                order: order.uuid,
-                                                                delivery:
-                                                                    delivery.uuid,
-                                                            }),
-                                                            'Tandai pengiriman selesai?',
-                                                        )
-                                                    }
-                                                    className="btn btn-brand"
-                                                >
-                                                    Tandai Selesai
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() =>
-                                                        confirmAction(
-                                                            fail.url({
-                                                                order: order.uuid,
-                                                                delivery:
-                                                                    delivery.uuid,
-                                                            }),
-                                                            'Tandai pengiriman gagal?',
-                                                        )
-                                                    }
-                                                    className="border border-danger-strong px-4 py-3 text-sm font-semibold text-danger-strong transition-colors hover:bg-danger-soft"
-                                                >
-                                                    Gagal
-                                                </button>
-                                            </>
-                                        )}
-                                    </div>
                                 )}
                             </div>
                         ) : (
@@ -528,7 +511,8 @@ export default function OrderShow({ order, assignOptions }: OrderShowProps) {
                                                         }),
                                                     )
                                                 }
-                                                className="btn btn-brand mt-5 w-full"
+                                                disabled={pendingAction}
+                                                className="btn btn-brand mt-5 w-full disabled:cursor-not-allowed disabled:opacity-50"
                                             >
                                                 Bayar Sekarang
                                             </button>
@@ -602,7 +586,8 @@ export default function OrderShow({ order, assignOptions }: OrderShowProps) {
                                             `Batalkan pesanan ${order.order_number}?`,
                                         )
                                     }
-                                    className="w-full border border-danger-strong px-4 py-3 text-sm font-semibold text-danger-strong transition-colors hover:bg-danger-soft"
+                                    disabled={pendingAction}
+                                    className="w-full border border-danger-strong px-4 py-3 text-sm font-semibold text-danger-strong transition-colors hover:bg-danger-soft disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     Batalkan Pesanan
                                 </button>

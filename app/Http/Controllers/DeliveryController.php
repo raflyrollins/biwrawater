@@ -5,10 +5,14 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Enums\DeliveryStatus;
+use App\Enums\PhotoType;
 use App\Models\Delivery;
 use App\Models\Driver;
 use App\Services\DeliveryService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 use Laravel\Head\Facades\Head;
@@ -22,23 +26,49 @@ class DeliveryController extends Controller
     {
         Head::title('Jadwal Pengiriman');
 
-        $driverId = $this->currentDriver()->id;
+        return Inertia::render(
+            'dashboard/Deliveries',
+            $this->deliveryService->scheduleFor($this->currentDriver()),
+        );
+    }
 
-        return Inertia::render('dashboard/Deliveries', [
-            'active' => Delivery::query()
-                ->with(['order:id,order_number,address_snapshot,status', 'truck:id,name,plate_number'])
-                ->where('driver_id', $driverId)
-                ->whereIn('status', [DeliveryStatus::Scheduled, DeliveryStatus::OnTheWay])
-                ->orderBy('scheduled_at')
-                ->get(),
-            'history' => Delivery::query()
-                ->with(['order:id,order_number,status'])
-                ->where('driver_id', $driverId)
-                ->whereIn('status', [DeliveryStatus::Delivered, DeliveryStatus::Failed])
-                ->latest()
-                ->limit(10)
-                ->get(),
-        ]);
+    public function accept(Delivery $delivery): RedirectResponse
+    {
+        $this->authorizeDelivery($delivery);
+
+        try {
+            $this->deliveryService->accept($delivery);
+        } catch (RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', 'Tugas diterima. Silakan lakukan pengisian air.');
+    }
+
+    public function reject(Delivery $delivery): RedirectResponse
+    {
+        $this->authorizeDelivery($delivery);
+
+        try {
+            $this->deliveryService->reject($delivery);
+        } catch (RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', 'Tugas ditolak. Pesanan dikembalikan ke admin untuk penugasan ulang.');
+    }
+
+    public function fill(Delivery $delivery): RedirectResponse
+    {
+        $this->authorizeDelivery($delivery);
+
+        try {
+            $this->deliveryService->startFilling($delivery);
+        } catch (RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', 'Pengisian air dimulai.');
     }
 
     public function depart(Delivery $delivery): RedirectResponse
@@ -52,6 +82,19 @@ class DeliveryController extends Controller
         }
 
         return back()->with('success', 'Perjalanan dimulai.');
+    }
+
+    public function unload(Delivery $delivery): RedirectResponse
+    {
+        $this->authorizeDelivery($delivery);
+
+        try {
+            $this->deliveryService->startUnloading($delivery);
+        } catch (RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', 'Penurunan air dimulai.');
     }
 
     public function deliver(Delivery $delivery): RedirectResponse
@@ -78,6 +121,45 @@ class DeliveryController extends Controller
         }
 
         return back()->with('error', 'Pengiriman ditandai gagal. Pesanan dikembalikan ke antrean.');
+    }
+
+    public function storePhoto(Request $request, Delivery $delivery): RedirectResponse
+    {
+        $this->authorizeDelivery($delivery);
+
+        $validated = $request->validate([
+            'type' => ['required', Rule::enum(PhotoType::class)],
+            'photo' => ['required', 'image', 'max:4096'],
+        ]);
+
+        $type = PhotoType::from($validated['type']);
+
+        $allowed = ($type === PhotoType::Filling && in_array($delivery->status, [DeliveryStatus::Accepted, DeliveryStatus::Filling], true))
+            || ($type !== PhotoType::Filling && $delivery->status->is(DeliveryStatus::Unloading));
+
+        if (! $allowed) {
+            return back()->with('error', 'Foto hanya dapat diunggah pada tahap pengisian atau penurunan.');
+        }
+
+        /** @var UploadedFile|null $photo */
+        $photo = $request->file('photo');
+
+        if (! $photo instanceof UploadedFile) {
+            return back()->with('error', 'Foto tidak ditemukan.');
+        }
+
+        $path = $photo->store("deliveries/{$delivery->uuid}", 'public');
+
+        if ($path === false) {
+            return back()->with('error', 'Gagal menyimpan foto. Silakan coba lagi.');
+        }
+
+        $delivery->photos()->create([
+            'type' => $type,
+            'path' => $path,
+        ]);
+
+        return back()->with('success', 'Foto bukti berhasil diunggah.');
     }
 
     private function currentDriver(): Driver
