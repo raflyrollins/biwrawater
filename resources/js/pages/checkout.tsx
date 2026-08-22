@@ -65,6 +65,7 @@ interface CheckoutProps {
     addresses: Address[];
     promotions: Promotion[];
     promo_preview?: PromoPreview | null;
+    schedule_status?: { is_open: boolean; message: string };
 }
 
 interface CheckoutFormValues {
@@ -100,7 +101,10 @@ export default function Checkout({
     addresses,
     promotions,
     promo_preview,
+    schedule_status,
 }: CheckoutProps) {
+    const shopClosed =
+        schedule_status !== undefined && !schedule_status.is_open;
     const { data, setData, errors, processing, post } =
         useForm<CheckoutFormValues>({
             service_id: services[0] ? String(services[0].id) : '',
@@ -701,9 +705,22 @@ export default function Checkout({
                                 <FieldError message={errors.promo_code} />
                             </div>
 
+                            {shopClosed && (
+                                <div className="mb-6 border border-danger-strong bg-danger-soft p-4">
+                                    <p className="text-sm font-semibold text-danger-strong">
+                                        Toko Sedang Tutup
+                                    </p>
+                                    <p className="mt-1 text-xs text-body">
+                                        {schedule_status?.message}
+                                    </p>
+                                </div>
+                            )}
+
                             <button
                                 type="submit"
-                                disabled={processing || !selectedService}
+                                disabled={
+                                    processing || !selectedService || shopClosed
+                                }
                                 className="btn btn-brand mt-6 w-full"
                             >
                                 {processing

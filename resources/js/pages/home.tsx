@@ -10,17 +10,34 @@ import ServiceArea from '../components/public/ServiceArea';
 import Services from '../components/public/Services';
 import { ThemeProvider } from '../hooks/useTheme';
 
-export default function Home() {
+interface HomeProps {
+    services: Array<{
+        id: number;
+        name: string;
+        description: string | null;
+        price: number;
+        volume_liters: number;
+    }>;
+    schedule_status: {
+        is_open: boolean;
+        message: string;
+    };
+}
+
+export default function Home({ services, schedule_status }: HomeProps) {
     const { appearance } = usePage().props;
 
     return (
         <ThemeProvider appearance={appearance}>
             <Navbar />
             <main>
-                <Hero />
-                <Services />
+                <Hero
+                    is_open={schedule_status.is_open}
+                    closed_message={schedule_status.message}
+                />
+                <Services services={services} />
                 <HowItWorks />
-                <ServiceArea />
+                <ServiceArea schedule_status={schedule_status} />
                 <Features />
                 <Faq />
                 <CtaSection />

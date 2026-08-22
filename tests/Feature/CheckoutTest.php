@@ -9,6 +9,18 @@ use App\Models\PromoCode;
 use App\Models\Promotion;
 use App\Models\Service;
 use App\Models\User;
+use Database\Seeders\OperatingHoursSeeder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
+
+uses(RefreshDatabase::class);
+
+beforeEach(function (): void {
+    Carbon::setTestNow(Carbon::parse('2026-08-26 10:00:00', 'Asia/Jakarta'));
+    $this->seed(OperatingHoursSeeder::class);
+});
+
+afterEach(fn () => Carbon::setTestNow());
 
 test('tamu diarahkan ke login saat membuka halaman pesan', function () {
     $this->get(route('checkout.index'))->assertRedirect(route('login'));

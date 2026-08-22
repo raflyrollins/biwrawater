@@ -173,5 +173,8 @@ return [
         'truck_id' => 'truk',
         'scheduled_at' => 'jadwal pengiriman',
         'photo' => 'foto',
+        'opens_at' => 'jam buka',
+        'closes_at' => 'jam tutup',
+        'date' => 'tanggal libur',
     ],
 ];

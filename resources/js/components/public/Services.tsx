@@ -2,30 +2,19 @@ import { Check, Droplets, Truck } from 'lucide-react';
 
 import { index as checkout } from '../../routes/checkout';
 
-const variants = [
-    {
-        name: 'Tangki 3.000L',
-        description: 'Cocok untuk rumah tangga dan tempat usaha kecil.',
-        features: [
-            '1 pesanan = 1 tangki',
-            'Dikonfirmasi sebelum pembayaran',
-            'Foto bukti serah terima',
-        ],
-        icon: Droplets,
-    },
-    {
-        name: 'Tangki 5.000L',
-        description: 'Untuk kebutuhan lebih besar: ruko, kost, dan perumahan.',
-        features: [
-            '1 pesanan = 1 tangki',
-            'Antrian pengiriman transparan',
-            'Diantar sesuai jadwal antrian',
-        ],
-        icon: Truck,
-    },
-];
+interface Service {
+    id: number;
+    name: string;
+    description: string | null;
+    price: number;
+    volume_liters: number;
+}
 
-export default function Services() {
+interface ServicesProps {
+    services: Service[];
+}
+
+export default function Services({ services }: ServicesProps) {
     return (
         <section id="layanan" className="section bg-gradient-page">
             <div className="container-section">
@@ -46,54 +35,78 @@ export default function Services() {
                 </div>
 
                 <div className="grid gap-6 md:grid-cols-2">
-                    {variants.map((variant, index) => (
-                        <article
-                            key={variant.name}
-                            className="card group relative p-8 transition-colors duration-150 hover:bg-neutral-secondary-soft lg:p-10"
-                        >
-                            <div className="flex items-start justify-between">
-                                <span className="flex size-14 items-center justify-center bg-brand-softer text-fg-brand-strong">
-                                    <variant.icon
-                                        size={28}
-                                        aria-hidden="true"
-                                    />
-                                </span>
-                                <span className="label-caps text-body-subtle">
-                                    0{index + 1}
-                                </span>
-                            </div>
+                    {services.length === 0 ? (
+                        <p className="col-span-full text-center text-body-subtle">
+                            Belum ada varian tangki tersedia.
+                        </p>
+                    ) : (
+                        services.map((service, index) => (
+                            <article
+                                key={service.id}
+                                className="card group relative p-8 transition-colors duration-150 hover:bg-neutral-secondary-soft lg:p-10"
+                            >
+                                <div className="flex items-start justify-between">
+                                    <span className="flex size-14 items-center justify-center bg-brand-softer text-fg-brand-strong">
+                                        {service.volume_liters >= 8000 ? (
+                                            <Truck
+                                                size={28}
+                                                aria-hidden="true"
+                                            />
+                                        ) : (
+                                            <Droplets
+                                                size={28}
+                                                aria-hidden="true"
+                                            />
+                                        )}
+                                    </span>
+                                    <span className="label-caps text-body-subtle">
+                                        0{index + 1}
+                                    </span>
+                                </div>
 
-                            <h3 className="mt-8 text-2xl text-heading lg:text-3xl">
-                                {variant.name}
-                            </h3>
-                            <p className="mt-2 text-body">
-                                {variant.description}
-                            </p>
+                                <h3 className="mt-8 text-2xl text-heading lg:text-3xl">
+                                    {service.name}
+                                </h3>
+                                <p className="mt-2 text-body">
+                                    {service.description ?? '-'}
+                                </p>
 
-                            <ul className="mt-6 space-y-3">
-                                {variant.features.map((feature) => (
-                                    <li
-                                        key={feature}
-                                        className="flex items-center gap-3 text-sm text-body"
-                                    >
+                                <ul className="mt-6 space-y-3">
+                                    <li className="flex items-center gap-3 text-sm text-body">
                                         <Check
                                             size={18}
                                             className="shrink-0 text-fg-brand"
                                             aria-hidden="true"
                                         />
-                                        {feature}
+                                        1 pesanan = 1 tangki
                                     </li>
-                                ))}
-                            </ul>
+                                    <li className="flex items-center gap-3 text-sm text-body">
+                                        <Check
+                                            size={18}
+                                            className="shrink-0 text-fg-brand"
+                                            aria-hidden="true"
+                                        />
+                                        Dikonfirmasi sebelum pembayaran
+                                    </li>
+                                    <li className="flex items-center gap-3 text-sm text-body">
+                                        <Check
+                                            size={18}
+                                            className="shrink-0 text-fg-brand"
+                                            aria-hidden="true"
+                                        />
+                                        Foto bukti serah terima
+                                    </li>
+                                </ul>
 
-                            <a
-                                href={checkout.url()}
-                                className="btn btn-brand mt-8 w-full"
-                            >
-                                Pesan Varian Ini
-                            </a>
-                        </article>
-                    ))}
+                                <a
+                                    href={checkout.url()}
+                                    className="btn btn-brand mt-8 w-full"
+                                >
+                                    Pesan Varian Ini
+                                </a>
+                            </article>
+                        ))
+                    )}
                 </div>
             </div>
         </section>

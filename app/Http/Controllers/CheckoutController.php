@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Promotion;
 use App\Models\Service;
+use App\Services\OperatingScheduleService;
 use App\Services\OrderService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,7 +17,10 @@ use RuntimeException;
 
 class CheckoutController extends Controller
 {
-    public function __construct(private readonly OrderService $orderService) {}
+    public function __construct(
+        private readonly OrderService $orderService,
+        private readonly OperatingScheduleService $schedule,
+    ) {}
 
     public function index(Request $request): Response
     {
@@ -31,6 +35,10 @@ class CheckoutController extends Controller
             'addresses' => $request->user()->addresses()->latest()->get(),
             'promotions' => Promotion::query()->active()->orderByDesc('value')->get(),
             'promo_preview' => fn () => $request->session()->get('promo_preview'),
+            'schedule_status' => fn () => [
+                'is_open' => $this->schedule->isOpenNow(),
+                'message' => $this->schedule->closedMessage(),
+            ],
         ]);
     }
 
@@ -66,6 +74,10 @@ class CheckoutController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        if (! $this->schedule->isOpenNow()) {
+            return back()->with('error', $this->schedule->closedMessage());
+        }
+
         $validated = $request->validate([
             'service_id' => ['required', 'integer', 'exists:services,id'],
             'address_id' => ['nullable', 'integer', 'exists:addresses,id'],

@@ -7,7 +7,9 @@ use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeliveryController;
 use App\Http\Controllers\DriverController;
+use App\Http\Controllers\HolidayController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\OperatingHourController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PromoCodeController;
@@ -90,6 +92,13 @@ Route::middleware(['auth', 'permission:orders.view|deliveries.view|dashboard.vie
             Route::post('/drivers/{driver}', [DriverController::class, 'update'])->name('drivers.update');
             Route::post('/drivers/{driver}/toggle', [DriverController::class, 'toggle'])->name('drivers.toggle');
             Route::delete('/drivers/{driver}', [DriverController::class, 'destroy'])->name('drivers.destroy');
+        });
+
+        Route::middleware('permission:settings.manage')->group(function (): void {
+            Route::get('/operating-hours', [OperatingHourController::class, 'index'])->name('operating-hours.index');
+            Route::put('/operating-hours', [OperatingHourController::class, 'update'])->name('operating-hours.update');
+            Route::post('/holidays', [HolidayController::class, 'store'])->name('holidays.store');
+            Route::delete('/holidays/{holiday}', [HolidayController::class, 'destroy'])->name('holidays.destroy');
         });
 
         Route::middleware('permission:addresses.manage')->group(function (): void {

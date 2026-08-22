@@ -59,6 +59,7 @@ class DatabaseSeeder extends Seeder
             ServiceSeeder::class,
             TruckSeeder::class,
             PromoCodeSeeder::class,
+            OperatingHoursSeeder::class,
         ]);
     }
 }

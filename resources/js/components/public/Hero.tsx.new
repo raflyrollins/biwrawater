@@ -1,0 +1,349 @@
+import { ArrowRight, Phone, Clock } from 'lucide-react';
+
+import { index as checkout } from '../../routes/checkout';
+import Button from './Button';
+
+interface HeroProps {
+    is_open: boolean;
+    closed_message: string;
+}
+
+const heroStats = [
+    { value: '3.000L', label: 'Kapasitas tersedia' },
+    { value: '1 Tangki', label: 'Per pesanan' },
+    { value: '100%', label: 'Bukti serah terima' },
+};
+
+function TruckIllustration() {
+    return (
+        <svg
+            viewBox="0 0 200 200"
+            className="w-full h-full max-w-[500px] mx-auto"
+            aria-hidden="true"
+            role="img"
+            aria-label="Truk tangki air"
+        >
+            <defs>
+                <linearGradient
+                    id="waterGrad"
+                    x1="0%"
+                    y1="0%"
+                    x2="100%"
+                    y2="100%"
+                >
+                    <stop offset="0%" stopColor="#0094D9" stopOpacity="0.9" />
+                    <stop offset="50%" stopColor="#005E8A" stopOpacity="0.8" />
+                    <stop offset="100%" stopColor="#003D6B" stopOpacity="0.7" />
+                </linearGradient>
+                <linearGradient
+                    id="truckGrad"
+                    x1="0%"
+                    y1="0%"
+                    x2="0%"
+                    y2="100%"
+                >
+                    <stop offset="0%" stopColor="#1a1a2e" />
+                    <stop offset="100%" stopColor="#0f0f1a" />
+                </linearGradient>
+                <radialGradient id="splashGlow" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" stopColor="#0094D9" stopOpacity="0.6" />
+                    <stop offset="70%" stopColor="#005E8A" stopOpacity="0.2" />
+                    <stop offset="100%" stopColor="#003D6B" stopOpacity="0" />
+                </radialGradient>
+                <filter
+                    id="waterBlur"
+                    x="-50%"
+                    y="-50%"
+                    width="200%"
+                    height="200%"
+                >
+                    <feGaussianBlur stdDeviation="1.5" />
+                </filter>
+            </defs>
+
+            <g className="truck-illustration" transform="translate(100, 100) scale(0.9)">
+                <g className="truck-body">
+                    <rect
+                        x="-70"
+                        y="0"
+                        width="140"
+                        height="50"
+                        rx="4"
+                        fill="url(#truckGrad)"
+                    />
+                    <rect
+                        x="-75"
+                        y="-35"
+                        width="150"
+                        height="35"
+                        rx="3"
+                        fill="#1a1a2e"
+                    />
+                    <ellipse
+                        cx="-40"
+                        cy="50"
+                        rx="18"
+                        ry="12"
+                        fill="#0f0f1a"
+                        stroke="#333"
+                        strokeWidth="1"
+                    />
+                    <ellipse
+                        cx="40"
+                        cy="50"
+                        rx="18"
+                        ry="12"
+                        fill="#0f0f1a"
+                        stroke="#333"
+                        strokeWidth="1"
+                    />
+                    <rect
+                        x="-55"
+                        y="-30"
+                        width="25"
+                        height="15"
+                        rx="2"
+                        fill="#0094D9"
+                        opacity="0.3"
+                    />
+                </g>
+
+                <g className="hose-splash" filter="url(#waterBlur)">
+                    <path
+                        d="M0,0 Q20,-40 45,-50"
+                        stroke="url(#waterGrad)"
+                        strokeWidth="5"
+                        fill="none"
+                        strokeLinecap="round"
+                        className="water-arc"
+                    />
+                    <path
+                        d="M-5,5 Q25,-35 40,-45"
+                        stroke="url(#waterGrad)"
+                        strokeWidth="3"
+                        fill="none"
+                        strokeLinecap="round"
+                        opacity="0.7"
+                        className="water-arc-inner"
+                    />
+                    <circle
+                        cx="45"
+                        cy="-50"
+                        r="10"
+                        fill="#0094D9"
+                        className="splash-main"
+                    />
+                    <circle
+                        cx="48"
+                        cy="-52"
+                        r="6"
+                        fill="#00D4FF"
+                        className="splash-core"
+                    />
+                    <circle
+                        cx="52"
+                        cy="-55"
+                        r="4"
+                        fill="#00D4FF"
+                        className="splash-tip"
+                    />
+                    <circle
+                        cx="38"
+                        cy="-45"
+                        r="3"
+                        fill="#0094D9"
+                        opacity="0.8"
+                        className="droplet-1"
+                    />
+                    <circle
+                        cx="50"
+                        cy="-58"
+                        r="2.5"
+                        fill="#00D4FF"
+                        opacity="0.9"
+                        className="droplet-2"
+                    />
+                    <circle
+                        cx="32"
+                        cy="-48"
+                        r="2.5"
+                        fill="#0094D9"
+                        opacity="0.7"
+                        className="droplet-3"
+                    />
+                    <circle
+                        cx="52"
+                        cy="-42"
+                        r="3"
+                        fill="#0094D9"
+                        opacity="0.6"
+                        className="droplet-4"
+                    />
+                </g>
+            </g>
+
+            {/* Styles moved to global CSS to avoid TS parsing issues */}
+        </svg>
+    );
+}
+
+function Wordmark() {
+    return (
+        <div
+            className="font-display text-left leading-[0.95] font-extrabold tracking-tight text-white/90 select-none"
+            aria-hidden="true"
+        >
+            <div className="line-clamp-1">biw</div>
+            <div className="line-clamp-1">raw</div>
+            <div className="line-clamp-1">ater</div>
+        </div>
+    );
+}
+
+export default function Hero({ is_open, closed_message }: HeroProps) {
+    return (
+        <section
+            id="beranda"
+            className="bg-gradient-brand relative flex min-h-[90vh] items-center overflow-hidden"
+        >
+            <div
+                aria-hidden="true"
+                className="absolute -top-24 -right-24 hidden h-96 w-96 bg-white/15 lg:block"
+            />
+            <div
+                aria-hidden="true"
+                className="absolute -bottom-32 left-1/3 hidden h-72 w-72 bg-white/10 lg:block"
+            />
+
+            <div className="container-section relative py-16 lg:py-24">
+                <div className="relative lg:grid lg:grid-cols-[2fr_1fr] lg:gap-12 lg:items-start lg:min-h-[70vh]">
+                    {/* KOLOM KIRI - 2/3 */}
+                    <div className="relative z-10 lg:pr-8">
+                        <p className="label-caps text-on-brand-muted">
+                            Medan Marelan & sekitarnya
+                        </p>
+                        <h1 className="font-display mt-4 max-w-2xl text-4xl leading-[1.1] font-extrabold tracking-tight text-white lg:text-5xl xl:text-6xl">
+                            Air bersih sampai ke rumah Anda, tepat waktu.
+                        </h1>
+                        <p className="mt-6 max-w-xl text-lg leading-relaxed text-on-brand-muted lg:text-xl">
+                            Biwrawater melayani pengisian air tangki bersih
+                            dengan armada terawat, antrian pengiriman yang
+                            jelas, dan pembayaran aman setelah pesanan
+                            dikonfirmasi.
+                        </p>
+
+                        {!is_open && (
+                            <div className="mt-8 flex items-center gap-3 border border-danger-strong bg-danger-soft p-4">
+                                <Clock
+                                    size={18}
+                                    aria-hidden="true"
+                                    className="text-danger-strong"
+                                />
+                                <span className="text-sm font-medium text-danger-strong">
+                                    {closed_message}
+                                </span>
+                            </div>
+                        )}
+
+                        <div className="mt-10 flex flex-wrap items-center gap-4">
+                            <Button
+                                href={checkout.url()}
+                                variant="white"
+                                size="large"
+                                disabled={!is_open}
+                            >
+                                Pesan Sekarang
+                                <ArrowRight size={20} aria-hidden="true" />
+                            </Button>
+                            <a
+                                href="tel:+62812"
+                                className="inline-flex items-center gap-2 text-base font-medium text-white underline underline-offset-4 hover:no-underline"
+                            >
+                                <Phone size={18} aria-hidden="true" />
+                                Hubungi Kami
+                            </a>
+                        </div>
+
+                        <dl className="mt-14 grid grid-cols-3 gap-6 border-t border-white/15 pt-8">
+                            {heroStats.map((stat) => (
+                                <div key={stat.label}>
+                                    <dt className="sr-only">{stat.label}</dt>
+                                    <dd className="font-display text-2xl font-bold text-white lg:text-3xl">
+                                        {stat.value}
+                                    </dd>
+                                    <dd className="mt-1 text-sm text-on-brand-muted">
+                                        {stat.label}
+                                    </dd>
+                                </div>
+                            ))}
+                        </dl>
+                    </div>
+
+                    {/* KOLOM KANAN - WORDMARK */}
+                    <div className="hidden lg:flex lg:items-center lg:justify-start lg:pt-8 lg:pr-4">
+                        <Wordmark />
+                    </div>
+
+                    {/* TRUK ILUSTRASI - ABSOLUTE CENTERED OVERLAP */}
+                    <div className="absolute lg:left-1/2 lg:-translate-x-1/2 lg:-translate-y-1/2 lg:top-1/2 lg:z-0 w-full max-w-[550px] mx-auto pointer-events-none">
+                        <TruckIllustration />
+                    </div>
+                </div>
+
+                {/* MOBILE: TRUK + WORDMARK */}
+                <div className="lg:hidden mt-12">
+                    <TruckIllustration />
+                </div>
+
+                <div className="lg:hidden mt-8 text-center">
+                    <Wordmark />
+                </div>
+
+                {/* STATS - always in left column flow */}
+                {/* CARD ANTRIAN TRANSPARAN - ABSOLUTE NEAR TRUCK */}
+                <div className="absolute lg:left-[62%] lg:top-[65%] lg:-translate-y-1/2 lg:z-10 hidden lg:block max-w-[280px]">
+                    <div className="card p-4 shadow-xl border border-border-subtle bg-neutral-darkest/90 backdrop-blur-sm">
+                        <p className="text-sm font-medium text-heading">
+                            Antrian transparan
+                        </p>
+                        <p className="mt-1 text-sm text-body-subtle">
+                            Setiap pesanan terkonfirmasi masuk antrian
+                            pengiriman hari itu atau hari kerja berikutnya.
+                        </p>
+                    </div>
+                </div>
+
+                {/* CLOSED MESSAGE BANNER - FIXED BOTTOM ON MOBILE, INLINE ON DESKTOP */}
+                {!is_open && (
+                    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-md px-4 lg:static lg:translate-x-0 lg:max-w-none lg:py-0 lg:hidden">
+                        <div className="flex items-center gap-3 border border-danger-strong bg-danger-soft p-4">
+                            <Clock
+                                size={18}
+                                aria-hidden="true"
+                                className="shrink-0 text-danger-strong"
+                            />
+                            <span className="text-sm font-medium text-danger-strong">
+                                {closed_message}
+                            </span>
+                        </div>
+                    </div>
+                )}
+
+                {!is_open && (
+                    <div className="lg:block mt-8 lg:hidden">
+                        <div className="flex items-center gap-3 border border-danger-strong bg-danger-soft p-4">
+                            <Clock
+                                size={18}
+                                aria-hidden="true"
+                                className="shrink-0 text-danger-strong"
+                            />
+                            <span className="text-sm font-medium text-danger-strong">
+                                {closed_message}
+                            </span>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </section>
+    );
+}

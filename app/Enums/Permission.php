@@ -26,6 +26,8 @@ enum Permission: string
     case TrucksManage = 'trucks.manage';
     case DriversManage = 'drivers.manage';
 
+    case SettingsManage = 'settings.manage';
+
     public function label(): string
     {
         return match ($this) {
@@ -41,6 +43,7 @@ enum Permission: string
             self::PromoCodesManage => 'Mengelola kode promo',
             self::TrucksManage => 'Mengelola armada',
             self::DriversManage => 'Mengelola driver',
+            self::SettingsManage => 'Mengelola jam operasional & hari libur',
         };
     }
 }

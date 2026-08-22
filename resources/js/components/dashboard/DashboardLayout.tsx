@@ -1,5 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
 import {
+    Clock,
     LayoutDashboard,
     LogOut,
     MapPin,
@@ -20,6 +21,7 @@ import { logout as authLogout } from '../../routes/auth';
 import { index as dashboardIndex } from '../../routes/dashboard';
 import { index as addressesIndex } from '../../routes/dashboard/addresses';
 import { index as driversIndex } from '../../routes/dashboard/drivers';
+import { index as operatingHoursIndex } from '../../routes/dashboard/operating-hours';
 import { index as ordersIndex } from '../../routes/dashboard/orders';
 import { index as promoCodesIndex } from '../../routes/dashboard/promo-codes';
 import { index as promotionsIndex } from '../../routes/dashboard/promotions';
@@ -100,6 +102,12 @@ const NAV_ITEMS: Record<string, NavItem[]> = {
             label: 'Driver',
             permission: 'drivers.manage',
             icon: <UserRound size={16} aria-hidden="true" />,
+        },
+        {
+            href: operatingHoursIndex.url(),
+            label: 'Jam Operasional',
+            permission: 'settings.manage',
+            icon: <Clock size={16} aria-hidden="true" />,
         },
     ],
     driver: [

@@ -1,26 +1,37 @@
 import { Clock, MapPin, Truck } from 'lucide-react';
 
-const zones = [
-    {
-        name: 'Zona Marelan',
-        detail: 'Marelan, Marelan I & II, Rengas Pulau, Tanah Enam Ratus',
-        note: 'Gratis ongkir',
-        included: true,
-    },
-    {
-        name: 'Luar Zona',
-        detail: 'Tanjung Mulia, Paya Pasir, dan sekitarnya',
-        note: 'Biaya kirim sesuai ketentuan',
-        included: false,
-    },
-];
+interface Zone {
+    name: string;
+    detail: string;
+    note: string;
+    included: boolean;
+}
 
-const hours = [
-    { day: 'Senin - Sabtu', time: '07.00 - 17.00 WIB' },
-    { day: 'Minggu & hari libur', time: 'Sesuai kalender operasional' },
-];
+interface ScheduleStatus {
+    is_open: boolean;
+    message: string;
+}
 
-export default function ServiceArea() {
+interface ServiceAreaProps {
+    schedule_status: ScheduleStatus;
+}
+
+export default function ServiceArea({ schedule_status }: ServiceAreaProps) {
+    const zones: Zone[] = [
+        {
+            name: 'Zona Marelan',
+            detail: 'Marelan, Marelan I & II, Rengas Pulau, Tanah Enam Ratus',
+            note: 'Gratis ongkir',
+            included: true,
+        },
+        {
+            name: 'Luar Zona',
+            detail: 'Tanjung Mulia, Paya Pasir, dan sekitarnya',
+            note: 'Biaya kirim sesuai ketentuan',
+            included: false,
+        },
+    ];
+
     return (
         <section id="zona" className="section bg-gradient-page">
             <div className="container-section">
@@ -30,7 +41,7 @@ export default function ServiceArea() {
                             Zona Layanan
                         </p>
                         <h2 className="mt-4 text-heading">
-                            Area pengiriman &amp; jam operasional
+                            Area pengiriman & jam operasional
                         </h2>
                     </div>
                     <p className="text-lg leading-relaxed text-body lg:max-w-md">
@@ -85,26 +96,31 @@ export default function ServiceArea() {
                         <h3 className="mt-6 text-2xl text-heading">
                             Jam operasional
                         </h3>
-                        <p className="mt-2 text-sm leading-relaxed text-body">
-                            Diatur oleh admin dan dapat berubah. Beri tahu kami
-                            jika Anda perlu pengantaran di luar jam buka.
-                        </p>
 
-                        <dl className="mt-8 space-y-4 border-t border-border-default pt-6">
-                            {hours.map((hour) => (
-                                <div
-                                    key={hour.day}
-                                    className="flex items-center justify-between gap-4"
-                                >
-                                    <dt className="text-sm text-body-subtle">
-                                        {hour.day}
-                                    </dt>
-                                    <dd className="text-sm font-medium text-heading">
-                                        {hour.time}
-                                    </dd>
-                                </div>
-                            ))}
-                        </dl>
+                        <div className="mt-6 flex items-center gap-3">
+                            <span
+                                className={
+                                    schedule_status.is_open
+                                        ? 'inline-flex size-3 shrink-0 rounded-full bg-success-strong'
+                                        : 'inline-flex size-3 shrink-0 rounded-full bg-danger-strong'
+                                }
+                            />
+                            <span
+                                className={
+                                    schedule_status.is_open
+                                        ? 'text-sm font-medium text-success-strong'
+                                        : 'text-sm font-medium text-danger-strong'
+                                }
+                            >
+                                {schedule_status.is_open ? 'Buka' : 'Tutup'}
+                            </span>
+                        </div>
+
+                        {!schedule_status.is_open && (
+                            <p className="mt-3 text-sm leading-relaxed text-body">
+                                {schedule_status.message}
+                            </p>
+                        )}
 
                         <div className="mt-8 flex items-center gap-4 border-t border-border-default pt-6">
                             <span className="flex size-10 shrink-0 items-center justify-center bg-brand-softer text-fg-brand-strong">
