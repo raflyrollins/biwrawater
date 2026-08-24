@@ -8,191 +8,35 @@ interface HeroProps {
     closed_message: string;
 }
 
-function TruckTopView() {
-    return (
-        <svg
-            viewBox="0 0 200 120"
-            className="mx-auto h-full w-full max-w-[480px]"
-            aria-hidden="true"
-            role="img"
-            aria-label="Truk tangki air tampak atas"
-        >
-            <defs>
-                <linearGradient
-                    id="waterGrad"
-                    x1="0%"
-                    y1="0%"
-                    x2="100%"
-                    y2="100%"
-                >
-                    <stop offset="0%" stopColor="#0094D9" stopOpacity="0.9" />
-                    <stop offset="50%" stopColor="#005E8A" stopOpacity="0.8" />
-                    <stop offset="100%" stopColor="#003D6B" stopOpacity="0.7" />
-                </linearGradient>
-                <linearGradient
-                    id="truckGrad"
-                    x1="0%"
-                    y1="0%"
-                    x2="0%"
-                    y2="100%"
-                >
-                    <stop offset="0%" stopColor="#1a1a2e" />
-                    <stop offset="100%" stopColor="#0f0f1a" />
-                </linearGradient>
-                <radialGradient id="splashGlow" cx="50%" cy="50%" r="50%">
-                    <stop offset="0%" stopColor="#0094D9" stopOpacity="0.6" />
-                    <stop offset="70%" stopColor="#005E8A" stopOpacity="0.2" />
-                    <stop offset="100%" stopColor="#003D6B" stopOpacity="0" />
-                </radialGradient>
-                <filter
-                    id="waterBlur"
-                    x="-50%"
-                    y="-50%"
-                    width="200%"
-                    height="200%"
-                >
-                    <feGaussianBlur stdDeviation="1.5" />
-                </filter>
-            </defs>
-
-            <g className="truck-top" transform="translate(100, 60) scale(0.85)">
-                <g className="truck-body">
-                    <rect
-                        x="-60"
-                        y="-25"
-                        width="120"
-                        height="50"
-                        rx="6"
-                        fill="url(#truckGrad)"
-                    />
-                    <rect
-                        x="-50"
-                        y="-50"
-                        width="100"
-                        height="25"
-                        rx="4"
-                        fill="#1a1a2e"
-                    />
-                    <ellipse
-                        cx="-35"
-                        cy="25"
-                        rx="15"
-                        ry="10"
-                        fill="#0f0f1a"
-                        stroke="#333"
-                        strokeWidth="1"
-                    />
-                    <ellipse
-                        cx="35"
-                        cy="25"
-                        rx="15"
-                        ry="10"
-                        fill="#0f0f1a"
-                        stroke="#333"
-                        strokeWidth="1"
-                    />
-                    <rect
-                        x="-40"
-                        y="-55"
-                        width="30"
-                        height="20"
-                        rx="2"
-                        fill="#0094D9"
-                        opacity="0.3"
-                    />
-                </g>
-
-                <g className="hose-splash" filter="url(#waterBlur)">
-                    <path
-                        d="M-5,0 Q0,-35 5,-60"
-                        stroke="url(#waterGrad)"
-                        strokeWidth="4"
-                        fill="none"
-                        strokeLinecap="round"
-                        className="water-drop"
-                    />
-                    <circle
-                        cx="0"
-                        cy="-70"
-                        r="8"
-                        fill="#0094D9"
-                        className="splash-main"
-                    />
-                    <circle
-                        cx="0"
-                        cy="-72"
-                        r="4"
-                        fill="#00D4FF"
-                        className="splash-core"
-                    />
-                </g>
-            </g>
-        </svg>
-    );
-}
-
-function Wordmark() {
-    return (
-        <div
-            className="font-display text-left leading-[0.92] font-extrabold tracking-tight text-white/90 select-none"
-            aria-hidden="true"
-        >
-            <div className="line-clamp-1">biw</div>
-            <div className="line-clamp-1">raw</div>
-            <div className="line-clamp-1">ater</div>
-        </div>
-    );
-}
-
 export default function Hero({ is_open, closed_message }: HeroProps) {
     return (
-        <section
-            id="beranda"
-            className="bg-gradient-brand relative flex min-h-[85vh] items-center overflow-hidden"
-        >
-            <div
-                aria-hidden="true"
-                className="absolute -top-24 -right-24 hidden h-96 w-96 bg-white/15 lg:block"
-            />
-            <div
-                aria-hidden="true"
-                className="absolute -bottom-32 left-1/3 hidden h-72 w-72 bg-white/10 lg:block"
-            />
+        <main id="beranda" className="relative min-h-[85vh] overflow-hidden">
+            <div className="grid min-h-full lg:grid-cols-2">
+                {/* DESKTOP LEFT - INFO (RESPONSIVE BG) */}
+                <section className="relative flex hidden items-center overflow-hidden bg-[var(--neutral-primary-soft)] px-7 py-20 sm:px-12 lg:block lg:min-h-[760px] lg:px-[7vw] lg:py-24">
+                    <div
+                        className="pointer-events-none absolute top-[-30px] -right-16 h-[430px] w-[620px] rotate-[-18deg] rounded-[50%] border-b-[3px] border-brand/20 dark:border-brand/30"
+                        aria-hidden="true"
+                    />
+                    <div
+                        className="pointer-events-none absolute top-[70px] -right-20 h-[380px] w-[570px] rotate-[-18deg] rounded-[50%] border-b-2 border-brand/10 dark:border-brand/20"
+                        aria-hidden="true"
+                    />
 
-            <div className="container-section relative py-16 lg:py-24">
-                <div className="relative lg:grid lg:min-h-[65vh] lg:grid-cols-[2fr_1fr] lg:items-start lg:gap-12">
-                    {/* KOLOM KIRI - KONTEN BISNIS */}
-                    <div className="relative z-10 lg:pr-8">
-                        <p className="label-caps text-on-brand-muted">
-                            Medan Marelan & sekitarnya
-                        </p>
-                        <h1 className="font-display mt-4 max-w-2xl text-4xl leading-[1.1] font-extrabold tracking-tight text-white lg:text-5xl xl:text-6xl">
-                            Air bersih sampai ke rumah Anda, tepat waktu.
+                    <div className="relative z-10 max-w-[570px]">
+                        <h1 className="m-0 text-[48px] leading-[.98] font-semibold tracking-[-.045em] text-brand sm:text-[58px] lg:text-[64px]">
+                            Biwra siap antar.
                         </h1>
-                        <p className="mt-6 max-w-xl text-lg leading-relaxed text-on-brand-muted lg:text-xl">
-                            Biwrawater melayani pengisian air tangki bersih
-                            dengan armada terawat, antrian pengiriman yang
-                            jelas, dan pembayaran aman setelah pesanan
-                            dikonfirmasi.
+
+                        <p className="mt-7 max-w-[430px] text-[17px] leading-7 text-[var(--body)]">
+                            Pesan air tangki dengan mudah. Kami antar langsung
+                            ke lokasi Anda di Medan Marelan.
                         </p>
 
-                        {!is_open && (
-                            <div className="mt-8 flex items-center gap-3 border border-danger-strong bg-danger-soft p-4">
-                                <Clock
-                                    size={18}
-                                    aria-hidden="true"
-                                    className="text-danger-strong"
-                                />
-                                <span className="text-sm font-medium text-danger-strong">
-                                    {closed_message}
-                                </span>
-                            </div>
-                        )}
-
-                        <div className="mt-10 flex flex-wrap items-center gap-4">
+                        <div className="mt-8 flex flex-wrap gap-3">
                             <Button
                                 href={checkout.url()}
-                                variant="white"
+                                variant="brand"
                                 size="large"
                                 disabled={!is_open}
                             >
@@ -201,14 +45,115 @@ export default function Hero({ is_open, closed_message }: HeroProps) {
                             </Button>
                             <a
                                 href="tel:+62812"
-                                className="inline-flex items-center gap-2 text-base font-medium text-white underline underline-offset-4 hover:no-underline"
+                                className="inline-flex items-center justify-center border border-brand px-7 py-3.5 text-sm font-semibold text-brand transition hover:bg-brand hover:text-white"
                             >
                                 <Phone size={18} aria-hidden="true" />
                                 Hubungi Kami
                             </a>
                         </div>
 
-                        <dl className="mt-14 grid grid-cols-3 gap-6 border-t border-white/15 pt-8">
+                        <dl className="border-neutral-border border-neutral-border mt-14 grid grid-cols-3 gap-6 border-t pt-8">
+                            {[
+                                {
+                                    value: '3.000L',
+                                    label: 'Kapasitas tersedia',
+                                },
+                                { value: '1 Tangki', label: 'Per pesanan' },
+                                { value: '100%', label: 'Bukti serah terima' },
+                            ].map((stat) => (
+                                <div key={stat.label} className="text-center">
+                                    <dt className="sr-only">{stat.label}</dt>
+                                    <dd className="font-display text-2xl font-bold text-[var(--heading)] lg:text-3xl">
+                                        {stat.value}
+                                    </dd>
+                                    <dd className="mt-1 text-sm text-[var(--body)]">
+                                        {stat.label}
+                                    </dd>
+                                </div>
+                            ))}
+                        </dl>
+                    </div>
+                </section>
+
+                {/* DESKTOP RIGHT - WORDMARK CENTERED VERTICAL & HORIZONTAL */}
+                <section className="relative hidden min-h-[520px] w-full overflow-hidden bg-brand lg:flex lg:min-h-[760px] lg:items-center lg:justify-center">
+                    <div className="relative z-10 flex h-full w-full flex-col items-center justify-center px-7 pt-16 text-center sm:px-12 lg:px-12 lg:pt-24">
+                        <div>
+                            <div className="text-[70px] leading-[.82] font-bold tracking-[-.065em] text-white sm:text-[100px] lg:text-[116px]">
+                                biwrawater
+                            </div>
+                            <p className="mt-4 text-[18px] leading-[1.4] font-medium tracking-[.02em] text-white/80 sm:text-[22px]">
+                                solusi air tangki medan marelan
+                            </p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            {/* TRUK VERTICAL - DESKTOP CENTER OVERLAP */}
+            <div className="pointer-events-none absolute top-1/2 left-1/2 z-20 hidden -translate-x-1/2 -translate-y-1/2 lg:top-1/2 lg:left-1/2 lg:block lg:-translate-x-1/2 lg:-translate-y-1/2">
+                <img
+                    src="/images/truck_vertical.png"
+                    alt="Armada Biwra Water"
+                    className="h-auto w-full max-w-[400px] drop-shadow-[0_24px_28px_rgba(0,0,0,0.18)]"
+                />
+            </div>
+
+            {/* MOBILE: 2 SECTIONS WITH TRUCK OVERLAP AT BOUNDARY */}
+            <div className="relative lg:hidden">
+                {/* SECTION 1: TOP (THEME BACKGROUND) */}
+                <section className="relative bg-[var(--neutral-primary-soft)] px-7 pt-12 pb-36 sm:px-12">
+                    <div className="mx-auto max-w-[570px] text-center">
+                        <h1 className="m-0 text-[36px] leading-[1.1] font-semibold tracking-[-.03em] text-brand sm:text-[44px]">
+                            Biwra siap antar.
+                        </h1>
+
+                        <p className="dark:text-neutral-light mx-auto mt-5 max-w-[430px] text-[16px] leading-7 text-slate-700">
+                            Pesan air tangki dengan mudah. Kami antar langsung
+                            ke lokasi Anda di Medan Marelan.
+                        </p>
+
+                        <div className="mt-8 flex flex-wrap justify-center gap-3">
+                            <Button
+                                href={checkout.url()}
+                                variant="brand"
+                                size="large"
+                                disabled={!is_open}
+                            >
+                                Pesan Sekarang
+                                <ArrowRight size={20} aria-hidden="true" />
+                            </Button>
+                            <a
+                                href="tel:+62812"
+                                className="inline-flex items-center justify-center border border-brand px-7 py-3.5 text-sm font-semibold text-brand transition hover:bg-brand hover:text-white"
+                            >
+                                <Phone size={18} aria-hidden="true" />
+                                Hubungi Kami
+                            </a>
+                        </div>
+                    </div>
+                </section>
+
+                {/* TRUCK OVERLAP - EXACTLY AT BOUNDARY BETWEEN SECTION 1 & 2 */}
+                <div className="pointer-events-none absolute left-1/2 z-20 flex w-full max-w-[320px] -translate-x-1/2 -translate-y-1/2 justify-center">
+                    <img
+                        src="/images/truck.png"
+                        alt="Armada Biwra Water"
+                        className="h-auto w-full drop-shadow-[0_16px_24px_rgba(0,0,0,0.18)]"
+                    />
+                </div>
+
+                {/* SECTION 2 - BRAND BLUE WITH WORDMARK + INFO */}
+                <section className="relative bg-brand px-7 pt-36 pb-16 text-center">
+                    <div className="relative z-10 px-7 text-center">
+                        <div className="text-[48px] leading-[.85] font-bold tracking-[-.05em] text-white sm:text-[72px]">
+                            biwrawater
+                        </div>
+                        <p className="mt-2 text-sm text-white/90">
+                            solusi air tangki medan marelan
+                        </p>
+
+                        <dl className="mt-10 grid grid-cols-3 gap-4 text-center">
                             {[
                                 {
                                     value: '3.000L',
@@ -219,67 +164,54 @@ export default function Hero({ is_open, closed_message }: HeroProps) {
                             ].map((stat) => (
                                 <div key={stat.label}>
                                     <dt className="sr-only">{stat.label}</dt>
-                                    <dd className="font-display text-2xl font-bold text-white lg:text-3xl">
+                                    <dd className="font-display text-xl font-bold text-white sm:text-2xl">
                                         {stat.value}
                                     </dd>
-                                    <dd className="mt-1 text-sm text-on-brand-muted">
+                                    <dd className="mt-0.5 text-xs text-white/90">
                                         {stat.label}
                                     </dd>
                                 </div>
                             ))}
                         </dl>
                     </div>
-
-                    {/* KOLOM KANAN - WORDMARK BESAR */}
-                    <div className="hidden lg:flex lg:items-center lg:justify-start lg:pt-8 lg:pr-4">
-                        <Wordmark />
-                    </div>
-
-                    {/* TRUK TENGAH - OVERLAP KEDUA KOLOM */}
-                    <div className="pointer-events-none absolute mx-auto w-full max-w-[480px] lg:top-1/2 lg:left-1/2 lg:z-0 lg:-translate-x-1/2 lg:-translate-y-1/2">
-                        <TruckTopView />
-                    </div>
-                </div>
-
-                {/* MOBILE STACK */}
-                <div className="mt-10 lg:hidden">
-                    <TruckTopView />
-                </div>
-
-                <div className="mt-6 text-center lg:hidden">
-                    <Wordmark />
-                </div>
-
-                {/* CLOSED MESSAGE - MOBILE FIXED BOTTOM, DESKTOP INLINE */}
-                {!is_open && (
-                    <div className="fixed bottom-6 left-1/2 z-50 w-full max-w-md -translate-x-1/2 px-4 lg:static lg:hidden lg:max-w-none lg:translate-x-0 lg:py-0">
-                        <div className="flex items-center gap-3 border border-danger-strong bg-danger-soft p-4">
-                            <Clock
-                                size={18}
-                                aria-hidden="true"
-                                className="shrink-0 text-danger-strong"
-                            />
-                            <span className="text-sm font-medium text-danger-strong">
-                                {closed_message}
-                            </span>
-                        </div>
-                    </div>
-                )}
-                {!is_open && (
-                    <div className="mt-8 lg:block lg:hidden">
-                        <div className="flex items-center gap-3 border border-danger-strong bg-danger-soft p-4">
-                            <Clock
-                                size={18}
-                                aria-hidden="true"
-                                className="shrink-0 text-danger-strong"
-                            />
-                            <span className="text-sm font-medium text-danger-strong">
-                                {closed_message}
-                            </span>
-                        </div>
-                    </div>
-                )}
+                </section>
             </div>
-        </section>
+
+            {/* Central dividing line - desktop only */}
+            <div
+                className="pointer-events-none absolute inset-y-0 left-1/2 hidden w-px bg-white/20 lg:block"
+                aria-hidden="true"
+            />
+
+            {/* CLOSED MESSAGE */}
+            {!is_open && (
+                <div className="fixed bottom-6 left-1/2 z-50 w-full max-w-md -translate-x-1/2 px-4 lg:static lg:hidden lg:max-w-none lg:translate-x-0 lg:py-0">
+                    <div className="flex items-center gap-3 border border-danger-strong bg-danger-soft p-4">
+                        <Clock
+                            size={18}
+                            aria-hidden="true"
+                            className="shrink-0 text-danger-strong"
+                        />
+                        <span className="text-sm font-medium text-danger-strong">
+                            {closed_message}
+                        </span>
+                    </div>
+                </div>
+            )}
+            {!is_open && (
+                <div className="mt-8 lg:block lg:hidden">
+                    <div className="flex items-center gap-3 border border-danger-strong bg-danger-soft p-4">
+                        <Clock
+                            size={18}
+                            aria-hidden="true"
+                            className="shrink-0 text-danger-strong"
+                        />
+                        <span className="text-sm font-medium text-danger-strong">
+                            {closed_message}
+                        </span>
+                    </div>
+                </div>
+            )}
+        </main>
     );
 }

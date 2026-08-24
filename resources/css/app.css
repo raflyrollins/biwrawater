@@ -282,15 +282,6 @@
             font-size: 20px;
         }
     }
-
-    a {
-        color: var(--fg-brand);
-        text-decoration: underline;
-    }
-
-    a:hover {
-        text-decoration: none;
-    }
 }
 
 @layer components {
