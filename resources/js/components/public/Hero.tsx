@@ -13,7 +13,7 @@ export default function Hero({ is_open, closed_message }: HeroProps) {
         <main id="beranda" className="relative min-h-[85vh] overflow-hidden">
             <div className="grid min-h-full lg:grid-cols-2">
                 {/* DESKTOP LEFT - INFO (RESPONSIVE BG) */}
-                <section className="relative flex hidden items-center overflow-hidden bg-[var(--neutral-primary-soft)] px-7 py-20 sm:px-12 lg:block lg:min-h-[760px] lg:px-[7vw] lg:py-24">
+                <section className="relative flex hidden items-center overflow-hidden bg-[var(--neutral-primary-soft)] px-7 py-20 sm:px-12 lg:flex lg:min-h-[760px] lg:px-[7vw] lg:py-24">
                     <div
                         className="pointer-events-none absolute top-[-30px] -right-16 h-[430px] w-[620px] rotate-[-18deg] rounded-[50%] border-b-[3px] border-brand/20 dark:border-brand/30"
                         aria-hidden="true"
@@ -52,7 +52,7 @@ export default function Hero({ is_open, closed_message }: HeroProps) {
                             </a>
                         </div>
 
-                        <dl className="border-neutral-border border-neutral-border mt-14 grid grid-cols-3 gap-6 border-t pt-8">
+                        <dl className="border-neutral-border border-neutral-border border-neutral-border mt-14 grid grid-cols-3 gap-6 border-t pt-8">
                             {[
                                 {
                                     value: '3.000L',
@@ -103,38 +103,40 @@ export default function Hero({ is_open, closed_message }: HeroProps) {
             <div className="relative lg:hidden">
                 {/* SECTION 1: TOP (THEME BACKGROUND) */}
                 <section className="relative bg-[var(--neutral-primary-soft)] px-7 pt-12 pb-36 sm:px-12">
-                    <div className="mx-auto max-w-[570px] text-center">
-                        <h1 className="m-0 text-[36px] leading-[1.1] font-semibold tracking-[-.03em] text-brand sm:text-[44px]">
-                            Biwra siap antar.
-                        </h1>
+                    <div className="relative z-10 px-7 py-16 sm:px-12">
+                        <div className="relative z-10 mx-auto max-w-[570px] text-center">
+                            <h1 className="m-0 text-[36px] leading-[1.1] font-semibold tracking-[-.03em] text-brand sm:text-[44px]">
+                                Biwra siap antar.
+                            </h1>
 
-                        <p className="dark:text-neutral-light mx-auto mt-5 max-w-[430px] text-[16px] leading-7 text-slate-700">
-                            Pesan air tangki dengan mudah. Kami antar langsung
-                            ke lokasi Anda di Medan Marelan.
-                        </p>
+                            <p className="dark:text-neutral-light mx-auto mt-5 max-w-[430px] text-[16px] leading-7 text-slate-700">
+                                Pesan air tangki dengan mudah. Kami antar
+                                langsung ke lokasi Anda di Medan Marelan.
+                            </p>
 
-                        <div className="mt-8 flex flex-wrap justify-center gap-3">
-                            <Button
-                                href={checkout.url()}
-                                variant="brand"
-                                size="large"
-                                disabled={!is_open}
-                            >
-                                Pesan Sekarang
-                                <ArrowRight size={20} aria-hidden="true" />
-                            </Button>
-                            <a
-                                href="tel:+62812"
-                                className="inline-flex items-center justify-center border border-brand px-7 py-3.5 text-sm font-semibold text-brand transition hover:bg-brand hover:text-white"
-                            >
-                                <Phone size={18} aria-hidden="true" />
-                                Hubungi Kami
-                            </a>
+                            <div className="mt-8 flex flex-wrap justify-center gap-3">
+                                <Button
+                                    href={checkout.url()}
+                                    variant="brand"
+                                    size="large"
+                                    disabled={!is_open}
+                                >
+                                    Pesan Sekarang
+                                    <ArrowRight size={20} aria-hidden="true" />
+                                </Button>
+                                <a
+                                    href="tel:+62812"
+                                    className="inline-flex items-center justify-center border border-brand px-7 py-3.5 text-sm font-semibold text-brand transition hover:bg-brand hover:text-white"
+                                >
+                                    <Phone size={18} aria-hidden="true" />
+                                    Hubungi Kami
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </section>
 
-                {/* TRUCK OVERLAP - EXACTLY AT BOUNDARY BETWEEN SECTION 1 & 2 */}
+                {/* TRUCK OVERLAP BETWEEN SECTIONS - PERFECTLY CENTERED BETWEEN SECTION 1 & 2 */}
                 <div className="pointer-events-none absolute left-1/2 z-20 flex w-full max-w-[320px] -translate-x-1/2 -translate-y-1/2 justify-center">
                     <img
                         src="/images/truck.png"
@@ -183,8 +185,9 @@ export default function Hero({ is_open, closed_message }: HeroProps) {
                 aria-hidden="true"
             />
 
-            {/* CLOSED MESSAGE */}
-            {!is_open && (
+            {/* CLOSED MESSAGE - Rendered using CSS display property */}
+            <div className={is_open ? 'hidden' : 'block'}>
+                {/* CLOSED MESSAGE - Mobile Fixed Bottom */}
                 <div className="fixed bottom-6 left-1/2 z-50 w-full max-w-md -translate-x-1/2 px-4 lg:static lg:hidden lg:max-w-none lg:translate-x-0 lg:py-0">
                     <div className="flex items-center gap-3 border border-danger-strong bg-danger-soft p-4">
                         <Clock
@@ -197,8 +200,8 @@ export default function Hero({ is_open, closed_message }: HeroProps) {
                         </span>
                     </div>
                 </div>
-            )}
-            {!is_open && (
+
+                {/* CLOSED MESSAGE - Desktop Inline */}
                 <div className="mt-8 lg:block lg:hidden">
                     <div className="flex items-center gap-3 border border-danger-strong bg-danger-soft p-4">
                         <Clock
@@ -211,7 +214,7 @@ export default function Hero({ is_open, closed_message }: HeroProps) {
                         </span>
                     </div>
                 </div>
-            )}
+            </div>
         </main>
     );
 }

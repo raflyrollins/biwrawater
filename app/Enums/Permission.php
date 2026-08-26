@@ -26,6 +26,8 @@ enum Permission: string
     case TrucksManage = 'trucks.manage';
     case DriversManage = 'drivers.manage';
 
+    case ZonesManage = 'zones.manage';
+
     case SettingsManage = 'settings.manage';
 
     public function label(): string
@@ -43,6 +45,7 @@ enum Permission: string
             self::PromoCodesManage => 'Mengelola kode promo',
             self::TrucksManage => 'Mengelola armada',
             self::DriversManage => 'Mengelola driver',
+            self::ZonesManage => 'Mengelola zona pengiriman',
             self::SettingsManage => 'Mengelola jam operasional & hari libur',
         };
     }

@@ -15,6 +15,7 @@ use App\Models\PromoCode;
 use App\Models\Promotion;
 use App\Models\Service;
 use App\Models\User;
+use App\Models\Zone;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
@@ -87,6 +88,7 @@ class OrderService
         Address $address,
         ?string $promoCode = null,
         ?string $customerNote = null,
+        ?int $zoneId = null,
     ): Order {
         return DB::transaction(function () use (
             $user,
@@ -94,6 +96,7 @@ class OrderService
             $address,
             $promoCode,
             $customerNote,
+            $zoneId,
         ): Order {
             if (! $service->is_active) {
                 throw new RuntimeException('Varian tangki tidak tersedia.');
@@ -136,17 +139,23 @@ class OrderService
                 );
             }
 
+            $zone = $zoneId ? Zone::find($zoneId) : ($address->zone ?? null);
+            $deliveryFee = $zone->delivery_fee ?? 0;
+            $grandTotal = $subtotal - $discountTotal + $deliveryFee;
+
             $order = Order::create([
                 'order_number' => Order::generateOrderNumber(),
                 'user_id' => $user->id,
                 'address_id' => $address->id,
+                'zone_id' => $zone?->id,
                 'address_snapshot' => $address->toArray(),
                 'status' => OrderStatus::Pending,
                 'payment_method' => PaymentMethod::Midtrans,
                 'payment_status' => PaymentStatus::Unpaid,
                 'subtotal' => $subtotal,
                 'discount_total' => $discountTotal,
-                'grand_total' => $subtotal - $discountTotal,
+                'grand_total' => $grandTotal,
+                'delivery_fee' => $deliveryFee,
                 'discount_snapshot' => $discountBreakdown === [] ? null : $discountBreakdown,
                 'customer_note' => $customerNote,
             ]);

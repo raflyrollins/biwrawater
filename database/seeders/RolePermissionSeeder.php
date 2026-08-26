@@ -35,6 +35,7 @@ class RolePermissionSeeder extends Seeder
                 PermissionEnum::PromoCodesManage,
                 PermissionEnum::TrucksManage,
                 PermissionEnum::DriversManage,
+                PermissionEnum::ZonesManage,
                 PermissionEnum::SettingsManage,
             ],
             RoleEnum::Driver->value => [

@@ -26,6 +26,7 @@ import { index as ordersIndex } from '../../routes/dashboard/orders';
 import { index as promoCodesIndex } from '../../routes/dashboard/promo-codes';
 import { index as promotionsIndex } from '../../routes/dashboard/promotions';
 import { index as trucksIndex } from '../../routes/dashboard/trucks';
+import { index as zonesIndex } from '../../routes/dashboard/zones';
 import Logo from '../public/Logo';
 import ThemeToggle from '../public/ThemeToggle';
 import { useToast } from '../ui/Toast';
@@ -102,6 +103,12 @@ const NAV_ITEMS: Record<string, NavItem[]> = {
             label: 'Driver',
             permission: 'drivers.manage',
             icon: <UserRound size={16} aria-hidden="true" />,
+        },
+        {
+            href: zonesIndex.url(),
+            label: 'Zona',
+            permission: 'zones.manage',
+            icon: <MapPin size={16} aria-hidden="true" />,
         },
         {
             href: operatingHoursIndex.url(),

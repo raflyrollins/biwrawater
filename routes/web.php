@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AddressController;
+use App\Http\Controllers\AreaController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\AuthPageController;
 use App\Http\Controllers\CheckoutController;
@@ -15,6 +16,7 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PromoCodeController;
 use App\Http\Controllers\PromotionController;
 use App\Http\Controllers\TruckController;
+use App\Http\Controllers\ZoneController;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Support\Facades\Route;
 
@@ -101,10 +103,20 @@ Route::middleware(['auth', 'permission:orders.view|deliveries.view|dashboard.vie
             Route::delete('/holidays/{holiday}', [HolidayController::class, 'destroy'])->name('holidays.destroy');
         });
 
+        Route::middleware('permission:zones.manage')->group(function (): void {
+            Route::get('/zones', [ZoneController::class, 'index'])->name('zones.index');
+            Route::post('/zones', [ZoneController::class, 'store'])->name('zones.store');
+            Route::post('/zones/{zone}', [ZoneController::class, 'update'])->name('zones.update');
+            Route::delete('/zones/{zone}', [ZoneController::class, 'destroy'])->name('zones.destroy');
+        });
+
         Route::middleware('permission:addresses.manage')->group(function (): void {
             Route::get('/addresses', [AddressController::class, 'index'])->name('addresses.index');
             Route::post('/addresses', [AddressController::class, 'store'])->name('addresses.store');
             Route::post('/addresses/{address}', [AddressController::class, 'update'])->name('addresses.update');
             Route::delete('/addresses/{address}', [AddressController::class, 'destroy'])->name('addresses.destroy');
         });
+
+        Route::post('/zone/lookup', [ZoneController::class, 'lookup'])->name('zone.lookup');
+        Route::get('/area/search', [AreaController::class, 'search'])->name('area.search');
     });

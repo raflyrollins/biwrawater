@@ -16,7 +16,6 @@ use App\Models\Delivery;
 use App\Models\Driver;
 use App\Models\Order;
 use App\Models\Truck;
-use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
 use RuntimeException;
 
@@ -38,7 +37,7 @@ class DeliveryService
                 ])
                 ->where('driver_id', $driver->id)
                 ->active()
-                ->orderBy('scheduled_at')
+                ->orderBy('created_at') // FIFO by creation time
                 ->get(),
             'history' => Delivery::query()
                 ->with(['order:id,order_number,status'])
@@ -52,8 +51,9 @@ class DeliveryService
 
     /**
      * Tugaskan truk dan driver ke pesanan yang sudah dikonfirmasi dan lunas.
+     * Menggunakan antrian FIFO (berdasarkan waktu pembayaran).
      */
-    public function assign(Order $order, Truck $truck, Driver $driver, CarbonInterface $scheduledAt, ?string $note = null): Delivery
+    public function assign(Order $order, Truck $truck, Driver $driver, ?string $note = null): Delivery
     {
         if (! $order->status->is(OrderStatus::Confirmed) || ! $order->payment_status->is(PaymentStatus::Paid)) {
             throw new RuntimeException('Hanya pesanan terkonfirmasi dan sudah dibayar yang dapat ditugaskan.');
@@ -67,12 +67,19 @@ class DeliveryService
 
         $order->delivery()->where('status', DeliveryStatus::Failed)->delete();
 
+        // Calculate delivery fee from zone
+        $deliveryFee = $order->zone->delivery_fee ?? 0;
+
         $delivery = $order->delivery()->create([
             'truck_id' => $truck->id,
             'driver_id' => $driver->id,
             'status' => DeliveryStatus::Scheduled,
-            'scheduled_at' => $scheduledAt,
             'note' => $note,
+        ]);
+
+        // Update order with delivery fee
+        $order->update([
+            'delivery_fee' => $deliveryFee,
         ]);
 
         DeliveryStatusChanged::dispatch($delivery, DeliveryStatus::None);

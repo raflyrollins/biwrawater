@@ -1,10 +1,12 @@
 import { usePage } from '@inertiajs/react';
 import { LogOut } from 'lucide-react';
+import React from 'react';
 
 import { useTheme } from '../../hooks/useTheme';
 import { login, register } from '../../routes';
 import { logout as authLogout } from '../../routes/auth';
 import { index as checkout } from '../../routes/checkout';
+import { index as dashboard } from '../../routes/dashboard';
 import type { User } from '../../types/auth';
 import Button from './Button';
 import Logo from './Logo';
@@ -49,12 +51,22 @@ export default function Navbar() {
                             {link.label}
                         </a>
                     ))}
+                    {user && (
+                        <React.Fragment>
+                            <a
+                                href={dashboard.url()}
+                                className="text-sm font-medium text-body transition-colors hover:text-heading"
+                            >
+                                Dashboard
+                            </a>
+                        </React.Fragment>
+                    )}
                 </nav>
 
                 <div className="flex items-center gap-3">
                     <ThemeToggle />
                     {user ? (
-                        <>
+                        <React.Fragment>
                             <span className="hidden text-sm font-medium text-body sm:inline">
                                 Halo, {user.name}
                             </span>
@@ -72,9 +84,9 @@ export default function Navbar() {
                                 <LogOut size={16} aria-hidden="true" />
                                 Keluar
                             </Button>
-                        </>
+                        </React.Fragment>
                     ) : (
-                        <>
+                        <React.Fragment>
                             <a
                                 href={login.url()}
                                 className="text-sm font-medium text-body transition-colors hover:text-heading"
@@ -84,7 +96,7 @@ export default function Navbar() {
                             <Button href={register.url()} variant="brand">
                                 Daftar
                             </Button>
-                        </>
+                        </React.Fragment>
                     )}
                 </div>
             </div>

@@ -13,6 +13,7 @@ use Illuminate\Support\Carbon;
 /**
  * @property int $id
  * @property int $user_id
+ * @property int|null $zone_id
  * @property string $label
  * @property string $recipient_name
  * @property string $phone
@@ -25,9 +26,11 @@ use Illuminate\Support\Carbon;
  * @property bool $is_default
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
+ * @property Zone|null $zone
  */
 #[Fillable([
     'user_id',
+    'zone_id',
     'label',
     'recipient_name',
     'phone',
@@ -62,6 +65,14 @@ class Address extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * @return BelongsTo<Zone, $this>
+     */
+    public function zone(): BelongsTo
+    {
+        return $this->belongsTo(Zone::class);
     }
 
     /**

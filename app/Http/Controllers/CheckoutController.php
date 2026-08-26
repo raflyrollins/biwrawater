@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Promotion;
 use App\Models\Service;
+use App\Models\Zone;
 use App\Services\OperatingScheduleService;
 use App\Services\OrderService;
 use Illuminate\Http\RedirectResponse;
@@ -33,6 +34,7 @@ class CheckoutController extends Controller
                 ->orderBy('sort_order')
                 ->get(),
             'addresses' => $request->user()->addresses()->latest()->get(),
+            'zones' => Zone::query()->active()->orderBy('name')->get(),
             'promotions' => Promotion::query()->active()->orderByDesc('value')->get(),
             'promo_preview' => fn () => $request->session()->get('promo_preview'),
             'schedule_status' => fn () => [
@@ -81,6 +83,7 @@ class CheckoutController extends Controller
         $validated = $request->validate([
             'service_id' => ['required', 'integer', 'exists:services,id'],
             'address_id' => ['nullable', 'integer', 'exists:addresses,id'],
+            'zone_id' => ['required_without:address_id', 'nullable', 'integer', 'exists:zones,id'],
             'label' => ['nullable', 'required_without:address_id', 'string', 'max:50'],
             'recipient_name' => ['nullable', 'required_without:address_id', 'string', 'max:255'],
             'phone' => ['nullable', 'required_without:address_id', 'string', 'max:20', 'regex:/^\+?[0-9\s]+$/'],
@@ -114,6 +117,7 @@ class CheckoutController extends Controller
                 'city' => $validated['city'],
                 'postal_code' => $validated['postal_code'] ?? null,
                 'notes' => $validated['notes'] ?? null,
+                'zone_id' => $validated['zone_id'] ?? null,
                 'is_default' => ! $user->addresses()->exists(),
             ]);
         }
@@ -125,6 +129,7 @@ class CheckoutController extends Controller
                 $address,
                 $validated['promo_code'] ?? null,
                 $validated['customer_note'] ?? null,
+                $validated['zone_id'] ?? null,
             );
         } catch (RuntimeException $e) {
             return back()

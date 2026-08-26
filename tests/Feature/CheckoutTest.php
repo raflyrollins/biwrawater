@@ -9,6 +9,7 @@ use App\Models\PromoCode;
 use App\Models\Promotion;
 use App\Models\Service;
 use App\Models\User;
+use App\Models\Zone;
 use Database\Seeders\OperatingHoursSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -18,6 +19,15 @@ uses(RefreshDatabase::class);
 beforeEach(function (): void {
     Carbon::setTestNow(Carbon::parse('2026-08-26 10:00:00', 'Asia/Jakarta'));
     $this->seed(OperatingHoursSeeder::class);
+
+    // Create default zone for tests with unique slug
+    Zone::factory()->create([
+        'name' => 'Zona Marelan',
+        'slug' => 'marelan-'.uniqid(),
+        'is_within_area' => true,
+        'delivery_fee' => 0,
+        'is_active' => true,
+    ]);
 });
 
 afterEach(fn () => Carbon::setTestNow());
@@ -29,7 +39,8 @@ test('tamu diarahkan ke login saat membuka halaman pesan', function () {
 test('pelanggan membuat pesanan dengan alamat tersimpan', function () {
     $user = User::factory()->create();
     $service = Service::factory()->create(['price' => 200000]);
-    $address = Address::factory()->for($user)->create();
+    $zone = Zone::factory()->create(['delivery_fee' => 0]);
+    $address = Address::factory()->for($user)->for($zone)->create();
 
     $this->actingAs($user)
         ->post(route('checkout.store'), [
@@ -56,6 +67,7 @@ test('pelanggan membuat pesanan dengan alamat tersimpan', function () {
 test('pelanggan membuat pesanan dengan alamat baru', function () {
     $user = User::factory()->create();
     $service = Service::factory()->create();
+    $zone = Zone::factory()->create(['delivery_fee' => 0]);
 
     $this->actingAs($user)
         ->post(route('checkout.store'), [
@@ -68,6 +80,7 @@ test('pelanggan membuat pesanan dengan alamat baru', function () {
             'subdistrict' => 'Marelan',
             'city' => 'Medan',
             'postal_code' => '20256',
+            'zone_id' => $zone->id,
         ])
         ->assertRedirect();
 
@@ -79,7 +92,8 @@ test('pelanggan membuat pesanan dengan alamat baru', function () {
 test('kode promo diterapkan dan diskon dihitung', function () {
     $user = User::factory()->create();
     $service = Service::factory()->create(['price' => 200000]);
-    $address = Address::factory()->for($user)->create();
+    $zone = Zone::factory()->create(['delivery_fee' => 0]);
+    $address = Address::factory()->for($user)->for($zone)->create();
     $promo = PromoCode::factory()->create([
         'type' => DiscountType::Percentage,
         'value' => 10,

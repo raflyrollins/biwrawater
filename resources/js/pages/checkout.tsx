@@ -12,6 +12,7 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 
 import FieldError from '../components/public/FieldError';
+import Autocomplete from '../components/ui/Autocomplete';
 import { formatRupiah } from '../lib/format';
 import { cn } from '../lib/utils';
 import { home } from '../routes';
@@ -29,6 +30,17 @@ interface Service {
     price: number;
 }
 
+interface Zone {
+    id: number;
+    name: string;
+    slug: string;
+    kecamatan: string;
+    kelurahan: string;
+    city: string;
+    is_within_area: boolean;
+    delivery_fee: number;
+}
+
 interface Address {
     id: number;
     label: string;
@@ -41,6 +53,7 @@ interface Address {
     postal_code: string | null;
     notes: string | null;
     is_default: boolean;
+    zone_id: number | null;
 }
 
 interface Promotion {
@@ -63,6 +76,7 @@ interface PromoPreview {
 interface CheckoutProps {
     services: Service[];
     addresses: Address[];
+    zones: Zone[];
     promotions: Promotion[];
     promo_preview?: PromoPreview | null;
     schedule_status?: { is_open: boolean; message: string };
@@ -82,6 +96,7 @@ interface CheckoutFormValues {
     notes: string;
     promo_code: string;
     customer_note: string;
+    zone_id: string;
 }
 
 const EMPTY_NEW_ADDRESS = {
@@ -94,11 +109,13 @@ const EMPTY_NEW_ADDRESS = {
     city: '',
     postal_code: '',
     notes: '',
+    zone_id: '',
 };
 
 export default function Checkout({
     services,
     addresses,
+    zones,
     promotions,
     promo_preview,
     schedule_status,
@@ -116,6 +133,7 @@ export default function Checkout({
     const [usingNewAddress, setUsingNewAddress] = useState(
         addresses.length === 0,
     );
+    const [matchedZone, setMatchedZone] = useState<Zone | null>(null);
 
     function toggleAddressMode() {
         setUsingNewAddress((value) => {
@@ -123,7 +141,7 @@ export default function Checkout({
                 'address_id',
                 value ? (addresses[0] ? String(addresses[0].id) : '') : '',
             );
-
+            setMatchedZone(null);
             return !value;
         });
     }
@@ -136,9 +154,42 @@ export default function Checkout({
         promo_preview && promo_preview.code === data.promo_code.trim()
             ? promo_preview
             : null;
+
+    const selectedSavedAddress = !usingNewAddress
+        ? (addresses.find((a) => String(a.id) === data.address_id) ?? null)
+        : null;
+
+    const activeZone =
+        matchedZone ??
+        (selectedSavedAddress?.zone_id
+            ? (zones.find((z) => z.id === selectedSavedAddress.zone_id) ?? null)
+            : null);
+    const deliveryFee = activeZone?.delivery_fee ?? 0;
     const grandTotal = selectedService
-        ? selectedService.price - (appliedPromo?.discount_total ?? 0)
+        ? selectedService.price -
+          (appliedPromo?.discount_total ?? 0) +
+          deliveryFee
         : 0;
+
+    function handleAreaSelect(area: {
+        kecamatan: string;
+        kelurahan: string;
+        city: string;
+        delivery_fee: number;
+    }) {
+        setData('district', area.kecamatan);
+        setData('subdistrict', area.kelurahan);
+        setData('city', area.city);
+
+        const zone = zones.find(
+            (z) =>
+                z.kecamatan === area.kecamatan &&
+                z.kelurahan === area.kelurahan &&
+                z.city === area.city,
+        );
+        setData('zone_id', zone ? String(zone.id) : '');
+        setMatchedZone(zone ?? null);
+    }
 
     function checkPromo() {
         if (!selectedService || data.promo_code.trim() === '') {
@@ -406,86 +457,48 @@ export default function Checkout({
                                         <FieldError message={errors.phone} />
                                     </div>
                                     <div className="sm:col-span-2">
-                                        <label
-                                            htmlFor="address-street"
-                                            className="mb-2 block text-sm font-semibold text-heading"
-                                        >
-                                            Alamat Jalan
-                                        </label>
-                                        <input
-                                            id="address-street"
-                                            type="text"
-                                            value={data.street_address}
-                                            onChange={(e) =>
-                                                setData(
-                                                    'street_address',
-                                                    e.target.value,
-                                                )
+                                        <Autocomplete
+                                            label="Kota"
+                                            name="city"
+                                            value={data.city}
+                                            onChange={(value) =>
+                                                setData('city', value)
                                             }
-                                            className={cn(
-                                                'input',
-                                                errors.street_address &&
-                                                    'input-error',
-                                            )}
-                                            placeholder="Jalan, nomor, RT/RW"
-                                        />
-                                        <FieldError
-                                            message={errors.street_address}
+                                            onSelect={handleAreaSelect}
+                                            required
+                                            placeholder="Ketik nama kota..."
+                                            error={errors.city}
                                         />
                                     </div>
                                     <div>
-                                        <label
-                                            htmlFor="address-district"
-                                            className="mb-2 block text-sm font-semibold text-heading"
-                                        >
-                                            Kecamatan
-                                        </label>
-                                        <input
-                                            id="address-district"
-                                            type="text"
+                                        <Autocomplete
+                                            label="Kecamatan"
+                                            name="district"
                                             value={data.district}
-                                            onChange={(e) =>
-                                                setData(
-                                                    'district',
-                                                    e.target.value,
-                                                )
+                                            onChange={(value) =>
+                                                setData('district', value)
                                             }
-                                            className={cn(
-                                                'input',
-                                                errors.district &&
-                                                    'input-error',
-                                            )}
+                                            onSelect={handleAreaSelect}
+                                            required
+                                            placeholder="Ketik nama kecamatan..."
+                                            error={errors.district}
                                         />
-                                        <FieldError message={errors.district} />
                                     </div>
                                     <div>
-                                        <label
-                                            htmlFor="address-subdistrict"
-                                            className="mb-2 block text-sm font-semibold text-heading"
-                                        >
-                                            Kelurahan (opsional)
-                                        </label>
-                                        <input
-                                            id="address-subdistrict"
-                                            type="text"
+                                        <Autocomplete
+                                            label="Kelurahan"
+                                            name="subdistrict"
                                             value={data.subdistrict}
-                                            onChange={(e) =>
-                                                setData(
-                                                    'subdistrict',
-                                                    e.target.value,
-                                                )
+                                            onChange={(value) =>
+                                                setData('subdistrict', value)
                                             }
-                                            className={cn(
-                                                'input',
-                                                errors.subdistrict &&
-                                                    'input-error',
-                                            )}
-                                        />
-                                        <FieldError
-                                            message={errors.subdistrict}
+                                            onSelect={handleAreaSelect}
+                                            required
+                                            placeholder="Ketik nama kelurahan..."
+                                            error={errors.subdistrict}
                                         />
                                     </div>
-                                    <div>
+                                    <div className="sm:col-span-2">
                                         <label
                                             htmlFor="address-city"
                                             className="mb-2 block text-sm font-semibold text-heading"
@@ -503,9 +516,31 @@ export default function Checkout({
                                                 'input',
                                                 errors.city && 'input-error',
                                             )}
+                                            readOnly={!!matchedZone}
                                         />
                                         <FieldError message={errors.city} />
                                     </div>
+                                    {activeZone && (
+                                        <div className="flex items-center gap-2 rounded-sm bg-brand-soft px-4 py-3 text-sm sm:col-span-2">
+                                            <MapPin
+                                                size={16}
+                                                className="shrink-0 text-fg-brand"
+                                                aria-hidden="true"
+                                            />
+                                            <span className="text-heading">
+                                                Zona:{' '}
+                                                <span className="font-semibold">
+                                                    {activeZone.name}
+                                                </span>
+                                            </span>
+                                            <span className="text-body-subtle">
+                                                —{' '}
+                                                {activeZone.delivery_fee > 0
+                                                    ? `Ongkir ${formatRupiah(activeZone.delivery_fee)}`
+                                                    : 'Gratis ongkir'}
+                                            </span>
+                                        </div>
+                                    )}
                                     <div>
                                         <label
                                             htmlFor="address-postal"
@@ -627,6 +662,16 @@ export default function Checkout({
                                         </span>
                                     </div>
                                 )}
+                                <div className="flex justify-between gap-3">
+                                    <span className="text-body-subtle">
+                                        Biaya Kirim
+                                    </span>
+                                    <span className="font-semibold text-heading">
+                                        {deliveryFee > 0
+                                            ? formatRupiah(deliveryFee)
+                                            : 'Gratis'}
+                                    </span>
+                                </div>
                                 <div className="flex justify-between gap-3 border-t border-border-default pt-3 text-base font-bold">
                                     <span className="text-heading">Total</span>
                                     <span className="text-heading">

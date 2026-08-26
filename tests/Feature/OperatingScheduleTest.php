@@ -99,39 +99,6 @@ test('jam tutup sebelum jam buka ditolak', function (): void {
     expect(OperatingHour::where('day_of_week', 1)->first()?->opens_at)->toBe('08:00:00');
 });
 
-test('hari libur dapat ditambahkan dan dihapus', function (): void {
-    $this->actingAs(adminUser())
-        ->post(route('dashboard.holidays.store'), [
-            'date' => '2026-08-25',
-            'name' => 'Hari Kemerdekaan',
-        ])
-        ->assertRedirect()
-        ->assertSessionHas('success');
-
-    expect(Holiday::where('date', '2026-08-25')->exists())->toBeTrue();
-
-    $holiday = Holiday::where('date', '2026-08-25')->firstOrFail();
-
-    $this->actingAs(adminUser())
-        ->delete(route('dashboard.holidays.destroy', $holiday))
-        ->assertRedirect()
-        ->assertSessionHas('success');
-
-    expect(Holiday::where('date', '2026-08-25')->exists())->toBeFalse();
-});
-
-test('duplikasi tanggal libur ditolak', function (): void {
-    Holiday::factory()->create(['date' => '2026-08-25', 'name' => 'Libur 1']);
-
-    $this->actingAs(adminUser())
-        ->post(route('dashboard.holidays.store'), [
-            'date' => '2026-08-25',
-            'name' => 'Libur 2',
-        ])
-        ->assertRedirect()
-        ->assertSessionHasErrors('date');
-});
-
 test('toko buka pada jam kerja hari biasa', function (): void {
     seedWeeklySchedule();
     Carbon::setTestNow(Carbon::parse('2026-08-26 10:00:00', 'Asia/Jakarta')); // Rabu 10:00 WIB

@@ -60,6 +60,7 @@ class DatabaseSeeder extends Seeder
             TruckSeeder::class,
             PromoCodeSeeder::class,
             OperatingHoursSeeder::class,
+            ZoneSeeder::class,
         ]);
     }
 }

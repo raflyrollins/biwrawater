@@ -97,7 +97,6 @@ class OrderController extends Controller
         $validated = $request->validate([
             'truck_id' => ['required', 'exists:trucks,id'],
             'driver_id' => ['required', 'exists:drivers,id'],
-            'scheduled_at' => ['required', 'date', 'after_or_equal:now'],
             'note' => ['nullable', 'string', 'max:255'],
         ]);
 
@@ -109,7 +108,6 @@ class OrderController extends Controller
                 $order,
                 $truck,
                 $driver,
-                now()->parse($validated['scheduled_at']),
                 $validated['note'] ?? null,
             );
         } catch (RuntimeException $e) {

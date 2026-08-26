@@ -11,6 +11,7 @@ use App\Models\Driver;
 use App\Models\Order;
 use App\Models\Truck;
 use App\Models\User;
+use App\Models\Zone;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -19,9 +20,11 @@ uses(RefreshDatabase::class);
 
 test('admin menugaskan truk dan driver ke pesanan yang sudah dibayar', function () {
     $admin = User::factory()->admin()->create();
+    $zone = Zone::factory()->create(['delivery_fee' => 0]);
     $order = Order::factory()->create([
         'status' => OrderStatus::Confirmed,
         'payment_status' => PaymentStatus::Paid,
+        'zone_id' => $zone->id,
     ]);
     $truck = Truck::factory()->create();
     $driver = Driver::factory()->create();
@@ -30,7 +33,6 @@ test('admin menugaskan truk dan driver ke pesanan yang sudah dibayar', function 
         ->post("/dashboard/orders/{$order->uuid}/assign", [
             'truck_id' => $truck->id,
             'driver_id' => $driver->id,
-            'scheduled_at' => now()->addHour()->format('Y-m-d H:i:s'),
             'note' => 'Hubungi pelanggan sebelum tiba',
         ])
         ->assertRedirect()
@@ -47,9 +49,11 @@ test('admin menugaskan truk dan driver ke pesanan yang sudah dibayar', function 
 
 test('penugasan ditolak ketika pesanan sudah memiliki pengiriman aktif', function () {
     $admin = User::factory()->admin()->create();
+    $zone = Zone::factory()->create(['delivery_fee' => 0]);
     $order = Order::factory()->create([
         'status' => OrderStatus::Confirmed,
         'payment_status' => PaymentStatus::Paid,
+        'zone_id' => $zone->id,
     ]);
     $truck = Truck::factory()->create();
     $driverUser = User::factory()->driver()->create();
@@ -68,7 +72,6 @@ test('penugasan ditolak ketika pesanan sudah memiliki pengiriman aktif', functio
         ->post("/dashboard/orders/{$order->uuid}/assign", [
             'truck_id' => $otherTruck->id,
             'driver_id' => $otherDriver->id,
-            'scheduled_at' => now()->addHours(2)->format('Y-m-d H:i:s'),
         ])
         ->assertRedirect()
         ->assertSessionHas('error');

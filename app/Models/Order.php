@@ -22,6 +22,7 @@ use Ramsey\Uuid\Uuid;
  * @property string $order_number
  * @property int $user_id
  * @property int|null $address_id
+ * @property int|null $zone_id
  * @property array<string, mixed> $address_snapshot
  * @property OrderStatus $status
  * @property PaymentMethod $payment_method
@@ -30,6 +31,7 @@ use Ramsey\Uuid\Uuid;
  * @property int $subtotal
  * @property int $discount_total
  * @property int $grand_total
+ * @property int $delivery_fee
  * @property array<string, mixed>|null $discount_snapshot
  * @property string|null $customer_note
  * @property Carbon|null $created_at
@@ -39,6 +41,7 @@ use Ramsey\Uuid\Uuid;
     'order_number',
     'user_id',
     'address_id',
+    'zone_id',
     'address_snapshot',
     'status',
     'payment_method',
@@ -47,6 +50,7 @@ use Ramsey\Uuid\Uuid;
     'subtotal',
     'discount_total',
     'grand_total',
+    'delivery_fee',
     'discount_snapshot',
     'customer_note',
 ])]
@@ -129,6 +133,14 @@ class Order extends Model
     public function delivery(): HasOne
     {
         return $this->hasOne(Delivery::class);
+    }
+
+    /**
+     * @return BelongsTo<Zone, $this>
+     */
+    public function zone(): BelongsTo
+    {
+        return $this->belongsTo(Zone::class);
     }
 
     /**
