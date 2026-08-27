@@ -44,7 +44,88 @@ test('admin menugaskan truk ke pesanan yang sudah dibayar', function () {
         ->and($order->delivery->status)->toBe(DeliveryStatus::Scheduled)
         ->and($order->delivery->truck_id)->toBe($truck->id)
         ->and($order->delivery->driver_id)->toBe($driver->id)
-        ->and($truck->refresh()->status)->toBe(TruckStatus::Assigned);
+        ->and($truck->refresh()->status)->toBe(TruckStatus::Available);
+});
+
+test('truk tetap dapat menerima pesanan berikutnya setelah pre-assign (multi-tugas)', function () {
+    $admin = User::factory()->admin()->create();
+    $zone = Zone::factory()->create(['delivery_fee' => 0]);
+    $driver = Driver::factory()->create();
+
+    $truck = Truck::factory()->create([
+        'capacity_liters' => 5000,
+        'default_driver_id' => $driver->id,
+    ]);
+
+    $orderOne = Order::factory()->create([
+        'status' => OrderStatus::Confirmed,
+        'payment_status' => PaymentStatus::Paid,
+        'zone_id' => $zone->id,
+    ]);
+    $orderTwo = Order::factory()->create([
+        'status' => OrderStatus::Confirmed,
+        'payment_status' => PaymentStatus::Paid,
+        'zone_id' => $zone->id,
+    ]);
+
+    foreach ([$orderOne, $orderTwo] as $order) {
+        $this->actingAs($admin)
+            ->post("/dashboard/orders/{$order->uuid}/assign", [
+                'truck_id' => $truck->id,
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+    }
+
+    expect($orderOne->refresh()->delivery->status)->toBe(DeliveryStatus::Scheduled)
+        ->and($orderTwo->refresh()->delivery->status)->toBe(DeliveryStatus::Scheduled)
+        ->and($truck->refresh()->status)->toBe(TruckStatus::Available);
+});
+
+test('admin dapat memilih driver selain driver default saat menugaskan', function () {
+    $admin = User::factory()->admin()->create();
+    $zone = Zone::factory()->create(['delivery_fee' => 0]);
+    $order = Order::factory()->create([
+        'status' => OrderStatus::Confirmed,
+        'payment_status' => PaymentStatus::Paid,
+        'zone_id' => $zone->id,
+    ]);
+    $defaultDriver = Driver::factory()->create();
+    $chosenDriver = Driver::factory()->create();
+    $truck = Truck::factory()->create(['default_driver_id' => $defaultDriver->id]);
+
+    $this->actingAs($admin)
+        ->post("/dashboard/orders/{$order->uuid}/assign", [
+            'truck_id' => $truck->id,
+            'driver_id' => $chosenDriver->id,
+        ])
+        ->assertRedirect()
+        ->assertSessionHas('success');
+
+    expect($order->refresh()->delivery->driver_id)->toBe($chosenDriver->id);
+});
+
+test('startFilling mengunci truk dan driver setelah pre-assign', function () {
+    $driverUser = User::factory()->driver()->create();
+    $driver = Driver::factory()->for($driverUser)->create();
+    $truck = Truck::factory()->create(['default_driver_id' => $driver->id]);
+    $order = Order::factory()->create([
+        'status' => OrderStatus::Confirmed,
+        'payment_status' => PaymentStatus::Paid,
+    ]);
+
+    $delivery = Delivery::factory()->for($order)->for($truck)->for($driver)->create([
+        'status' => DeliveryStatus::Scheduled,
+        'scheduled_at' => now(),
+    ]);
+
+    $this->actingAs($driverUser)
+        ->post("/dashboard/deliveries/{$delivery->uuid}/fill")
+        ->assertRedirect()
+        ->assertSessionHas('success');
+
+    expect($truck->refresh()->status)->toBe(TruckStatus::Assigned)
+        ->and($driver->refresh()->status)->toBe(DriverStatus::OnDuty);
 });
 
 test('penugasan ditolak ketika pesanan sudah memiliki pengiriman aktif', function () {

@@ -167,12 +167,19 @@ export default function OrdersIndex({ orders, filters }: OrdersIndexProps) {
                                             <td>
                                                 <span className="text-sm font-semibold text-heading">
                                                     {(() => {
-                                                        const total = order.items?.reduce(
-                                                            (sum, item) => sum + (item.volume_liters ?? 0) * item.quantity,
-                                                            0,
-                                                        ) ?? 0;
+                                                        const total =
+                                                            order.items?.reduce(
+                                                                (sum, item) =>
+                                                                    sum +
+                                                                    (item.volume_liters ??
+                                                                        0) *
+                                                                        item.quantity,
+                                                                0,
+                                                            ) ?? 0;
 
-                                                        return total > 0 ? `${total.toLocaleString('id-ID')} L` : '-';
+                                                        return total > 0
+                                                            ? `${total.toLocaleString('id-ID')} L`
+                                                            : '-';
                                                     })()}
                                                 </span>
                                             </td>

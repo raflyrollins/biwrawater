@@ -17,27 +17,43 @@ export interface AssignTruck {
     } | null;
 }
 
+export interface AssignDriver {
+    id: number;
+    user_id: number;
+    user: { name: string };
+}
+
 interface AssignDeliveryFormProps {
     orderUuid: string;
     totalLiters: number;
     trucks: AssignTruck[];
+    drivers: AssignDriver[];
 }
 
 export default function AssignDeliveryForm({
     orderUuid,
     totalLiters,
     trucks,
+    drivers,
 }: AssignDeliveryFormProps) {
     const { data, setData, errors, processing, post } = useForm({
         truck_id: '',
+        driver_id: '',
         note: '',
     });
 
-    const selectedTruck = trucks.find(
-        (t) => String(t.id) === data.truck_id,
-    );
-    const driverName =
-        selectedTruck?.defaultDriver?.user.name ?? '-';
+    const selectedTruck = trucks.find((t) => String(t.id) === data.truck_id);
+    const defaultDriverName = selectedTruck?.defaultDriver?.user.name ?? null;
+
+    function selectTruck(truckId: string) {
+        setData('truck_id', truckId);
+        const truck = trucks.find((t) => String(t.id) === truckId);
+        const defaultDriverId = truck?.default_driver_id;
+        setData(
+            'driver_id',
+            defaultDriverId != null ? String(defaultDriverId) : '',
+        );
+    }
 
     function submit(e: FormEvent) {
         e.preventDefault();
@@ -48,7 +64,10 @@ export default function AssignDeliveryForm({
         <form onSubmit={submit} className="card p-6">
             <p className="label-caps text-body-subtle">Tugaskan Pengiriman</p>
             <p className="mt-2 text-sm text-body-subtle">
-                Volume: <span className="font-semibold text-heading">{totalLiters.toLocaleString('id-ID')} liter</span>
+                Volume:{' '}
+                <span className="font-semibold text-heading">
+                    {totalLiters.toLocaleString('id-ID')} liter
+                </span>
             </p>
 
             <div className="mt-5 space-y-5">
@@ -56,7 +75,7 @@ export default function AssignDeliveryForm({
                     <Select
                         label="Armada"
                         value={data.truck_id}
-                        onChange={(value) => setData('truck_id', String(value))}
+                        onChange={(value) => selectTruck(String(value))}
                         options={trucks.map((truck) => ({
                             value: String(truck.id),
                             label: `${truck.name} · ${truck.plate_number} (${truck.capacity_liters.toLocaleString('id-ID')} L)`,
@@ -67,14 +86,30 @@ export default function AssignDeliveryForm({
                     />
                 </div>
 
-                {selectedTruck && (
-                    <div className="rounded-sm bg-neutral-tertiary-soft px-4 py-3 text-sm">
-                        <span className="text-body-subtle">Driver: </span>
-                        <span className="font-semibold text-heading">
-                            {driverName}
-                        </span>
-                    </div>
-                )}
+                <div>
+                    <Select
+                        label="Driver"
+                        value={data.driver_id}
+                        onChange={(value) =>
+                            setData('driver_id', String(value))
+                        }
+                        options={drivers.map((driver) => ({
+                            value: String(driver.id),
+                            label: driver.user.name,
+                        }))}
+                        placeholder={
+                            defaultDriverName
+                                ? `Driver default (${defaultDriverName})`
+                                : 'Pilih driver'
+                        }
+                        disabled={!selectedTruck}
+                        error={errors.driver_id}
+                        searchPlaceholder="Cari driver..."
+                    />
+                    <p className="mt-1 text-xs text-body-subtle">
+                        Pilihan pertama memakai driver default truk.
+                    </p>
+                </div>
 
                 <div>
                     <label

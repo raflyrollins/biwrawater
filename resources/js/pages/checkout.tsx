@@ -142,6 +142,7 @@ export default function Checkout({
                 value ? (addresses[0] ? String(addresses[0].id) : '') : '',
             );
             setMatchedZone(null);
+
             return !value;
         });
     }

@@ -8,11 +8,11 @@ import type { FormEvent } from 'react';
 import DashboardLayout from '../../../components/dashboard/DashboardLayout';
 import FieldError from '../../../components/public/FieldError';
 import { cn } from '../../../lib/utils';
-import { update as updateOperatingHours } from '../../../routes/dashboard/operating-hours';
 import {
     store as storeHoliday,
     destroy as destroyHoliday,
 } from '../../../routes/dashboard/holidays';
+import { update as updateOperatingHours } from '../../../routes/dashboard/operating-hours';
 
 interface OperatingDay {
     day_of_week: number;
@@ -64,6 +64,7 @@ export default function OperatingHoursIndex({
 
         if (!holidayDate || !holidayName.trim()) {
             setHolidayError('Tanggal dan nama wajib diisi.');
+
             return;
         }
 

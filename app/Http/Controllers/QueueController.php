@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Enums\DeliveryStatus;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
+use App\Models\Driver;
 use App\Models\Order;
 use App\Models\Truck;
 use Illuminate\Database\Eloquent\Builder;
@@ -75,10 +76,17 @@ class QueueController extends Controller
             ->orderBy('name')
             ->get();
 
+        $drivers = Driver::query()
+            ->available()
+            ->with('user:id,name')
+            ->orderBy('user_id')
+            ->get(['id', 'user_id']);
+
         return Inertia::render('dashboard/Queue', [
             'pendingOrders' => $pendingOrders,
             'assignedOrders' => $assignedOrders,
             'truckUnits' => $truckUnits,
+            'drivers' => $drivers,
         ]);
     }
 }

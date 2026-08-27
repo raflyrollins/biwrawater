@@ -1,6 +1,10 @@
 <?php
 
+use App\Enums\DeliveryStatus;
 use App\Enums\TruckStatus;
+use App\Models\Delivery;
+use App\Models\Driver;
+use App\Models\Order;
 use App\Models\Truck;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -70,6 +74,12 @@ test('status armada dapat dialihkan antara tersedia dan perbaikan', function () 
 test('status armada yang sedang bertugas tidak dapat diubah', function () {
     $admin = User::factory()->admin()->create();
     $truck = Truck::factory()->create(['status' => TruckStatus::Assigned]);
+    $driver = Driver::factory()->create();
+    $order = Order::factory()->create();
+
+    Delivery::factory()->for($order)->for($truck)->for($driver)->create([
+        'status' => DeliveryStatus::Scheduled,
+    ]);
 
     $this->actingAs($admin)
         ->post("/dashboard/trucks/{$truck->uuid}/toggle")
@@ -80,6 +90,12 @@ test('status armada yang sedang bertugas tidak dapat diubah', function () {
 test('armada yang sedang bertugas tidak dapat dinonaktifkan', function () {
     $admin = User::factory()->admin()->create();
     $truck = Truck::factory()->create(['status' => TruckStatus::Assigned]);
+    $driver = Driver::factory()->create();
+    $order = Order::factory()->create();
+
+    Delivery::factory()->for($order)->for($truck)->for($driver)->create([
+        'status' => DeliveryStatus::Scheduled,
+    ]);
 
     $this->actingAs($admin)
         ->delete("/dashboard/trucks/{$truck->uuid}")

@@ -6,8 +6,8 @@ namespace App\Http\Controllers;
 
 use App\Enums\OrderStatus;
 use App\Enums\Permission;
-use App\Enums\TruckStatus;
 use App\Events\OrderStatusChanged;
+use App\Models\Driver;
 use App\Models\Order;
 use App\Models\Truck;
 use App\Services\DeliveryService;
@@ -82,11 +82,15 @@ class OrderController extends Controller
             'assignOptions' => [
                 'trucks' => Truck::query()
                     ->active()
-                    ->where('status', TruckStatus::Available)
                     ->where('capacity_liters', $totalLiters)
                     ->with('defaultDriver.user:id,name')
                     ->orderBy('name')
                     ->get(['id', 'name', 'plate_number', 'capacity_liters', 'default_driver_id']),
+                'drivers' => Driver::query()
+                    ->available()
+                    ->with('user:id,name')
+                    ->orderBy('user_id')
+                    ->get(['id', 'user_id']),
             ],
         ]);
     }
@@ -95,16 +99,23 @@ class OrderController extends Controller
     {
         $validated = $request->validate([
             'truck_id' => ['required', 'exists:trucks,id'],
+            'driver_id' => ['nullable', 'exists:drivers,id'],
             'note' => ['nullable', 'string', 'max:255'],
         ]);
 
         $truck = Truck::query()->whereKey($validated['truck_id'])->firstOrFail();
+
+        $driver = null;
+        if (! empty($validated['driver_id'])) {
+            $driver = Driver::query()->whereKey($validated['driver_id'])->firstOrFail();
+        }
 
         try {
             $this->deliveryService->assign(
                 $order,
                 $truck,
                 $validated['note'] ?? null,
+                $driver,
             );
         } catch (RuntimeException $e) {
             return back()->with('error', $e->getMessage());

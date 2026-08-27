@@ -4,7 +4,10 @@ import { ArrowLeft, Clock } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import AssignDeliveryForm from '../../../components/dashboard/AssignDeliveryForm';
-import type { AssignTruck } from '../../../components/dashboard/AssignDeliveryForm';
+import type {
+    AssignDriver,
+    AssignTruck,
+} from '../../../components/dashboard/AssignDeliveryForm';
 import DashboardLayout from '../../../components/dashboard/DashboardLayout';
 import StatusBadge from '../../../components/dashboard/StatusBadge';
 import { useConfirm } from '../../../components/ui/ConfirmDialog';
@@ -70,6 +73,7 @@ interface OrderShowProps {
     order: OrderDetail;
     assignOptions: {
         trucks: AssignTruck[];
+        drivers: AssignDriver[];
     };
 }
 
@@ -241,10 +245,14 @@ export default function OrderShow({ order, assignOptions }: OrderShowProps) {
                                 <AssignDeliveryForm
                                     orderUuid={order.uuid}
                                     totalLiters={order.items.reduce(
-                                        (sum, item) => sum + (item.volume_liters ?? 0) * item.quantity,
+                                        (sum, item) =>
+                                            sum +
+                                            (item.volume_liters ?? 0) *
+                                                item.quantity,
                                         0,
                                     )}
                                     trucks={assignOptions.trucks}
+                                    drivers={assignOptions.drivers}
                                 />
                             )}
 

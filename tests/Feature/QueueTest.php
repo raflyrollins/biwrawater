@@ -105,7 +105,7 @@ test('antrian menyertakan data armada dengan driver default', function () {
         ->assertInertia(fn (Assert $page) => $page
             ->component('dashboard/Queue')
             ->has('truckUnits', 3)
-            ->missing('availableTrucks')
-            ->missing('availableDrivers')
+            ->has('drivers', 1)
+            ->where('drivers.0.user.name', $driver->user->name)
         );
 });

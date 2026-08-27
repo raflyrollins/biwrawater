@@ -51,10 +51,11 @@ class DeliveryService
 
     /**
      * Tugaskan truk ke pesanan yang sudah dikonfirmasi dan lunas.
-     * Driver diambil dari default_driver truk.
-     * Truk langsung di-assign (locked), driver belum di-lock.
+     * Driver diambil dari default_driver truk, atau driver yang dipilih admin.
+     * Truk TIDAK di-lock di sini agar bisa menerima beberapa pesanan
+     * (pre-assign multi-tugas). Lock truk + driver terjadi saat startFilling().
      */
-    public function assign(Order $order, Truck $truck, ?string $note = null): Delivery
+    public function assign(Order $order, Truck $truck, ?string $note = null, ?Driver $driver = null): Delivery
     {
         if (! $order->status->is(OrderStatus::Confirmed) || ! $order->payment_status->is(PaymentStatus::Paid)) {
             throw new RuntimeException('Hanya pesanan terkonfirmasi dan sudah dibayar yang dapat ditugaskan.');
@@ -70,9 +71,11 @@ class DeliveryService
 
         $deliveryFee = $order->zone->delivery_fee ?? 0;
 
+        $driver ??= $truck->defaultDriver;
+
         $delivery = $order->delivery()->create([
             'truck_id' => $truck->id,
-            'driver_id' => $truck->default_driver_id,
+            'driver_id' => $driver?->id,
             'status' => DeliveryStatus::Scheduled,
             'scheduled_at' => now(),
             'note' => $note,
@@ -82,16 +85,13 @@ class DeliveryService
             'delivery_fee' => $deliveryFee,
         ]);
 
-        // Lock truck only (driver locked at filling time)
-        $truck->update(['status' => TruckStatus::Assigned]);
-
         DeliveryStatusChanged::dispatch($delivery, DeliveryStatus::None);
 
         return $delivery;
     }
 
     /**
-     * Air mulai diisi ke tangki truk. Driver di-lock saat ini.
+     * Air mulai diisi ke tangki truk. Truk + driver di-lock saat ini.
      */
     public function startFilling(Delivery $delivery): void
     {
@@ -104,7 +104,10 @@ class DeliveryService
             'filling_started_at' => now(),
         ]);
 
-        // Lock driver at filling time
+        // Lock truck + driver at filling time
+        $delivery->truck?->update([
+            'status' => TruckStatus::Assigned,
+        ]);
         $delivery->driver?->update([
             'status' => DriverStatus::OnDuty,
         ]);

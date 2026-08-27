@@ -71,16 +71,24 @@ interface TruckUnit {
     deliveries: TruckUnitDelivery[];
 }
 
+interface DriverOption {
+    id: number;
+    user_id: number;
+    user: { name: string };
+}
+
 interface QueueProps {
     pendingOrders: QueueOrder[];
     assignedOrders: AssignedQueueOrder[];
     truckUnits: TruckUnit[];
+    drivers: DriverOption[];
 }
 
 export default function Queue({
     pendingOrders,
     assignedOrders,
     truckUnits,
+    drivers,
 }: QueueProps) {
     useDashboardRealtime();
     const [assigningOrder, setAssigningOrder] = useState<QueueOrder | null>(
@@ -233,8 +241,7 @@ export default function Queue({
                                     )}
 
                                     <div className="mt-auto pt-4">
-                                        {truck.status === 'available' &&
-                                        truck.default_driver_id !== null ? (
+                                        {truck.status === 'available' ? (
                                             <button
                                                 type="button"
                                                 disabled={
@@ -258,11 +265,11 @@ export default function Queue({
                                             <p className="text-center text-xs text-body-subtle">
                                                 {truck.deliveries_count} antrean
                                             </p>
-                                        ) : !truck.default_driver_id ? (
-                                            <p className="text-warning-strong text-center text-xs">
-                                                Belum ada driver default
+                                        ) : (
+                                            <p className="text-center text-xs text-body-subtle">
+                                                Truk sedang bertugas
                                             </p>
-                                        ) : null}
+                                        )}
                                     </div>
                                 </div>
                             ))}
@@ -524,9 +531,9 @@ export default function Queue({
                     truckUnits={truckUnits.filter(
                         (t) =>
                             t.status === 'available' &&
-                            t.default_driver_id !== null &&
                             t.capacity_liters === assigningOrder.total_liters,
                     )}
+                    drivers={drivers}
                     onClose={() => setAssigningOrder(null)}
                 />
             )}
@@ -537,21 +544,34 @@ export default function Queue({
 function QuickAssignModal({
     order,
     truckUnits,
+    drivers,
     onClose,
 }: {
     order: QueueOrder;
     truckUnits: TruckUnit[];
+    drivers: DriverOption[];
     onClose: () => void;
 }) {
     const { data, setData, errors, processing, post } = useForm({
         truck_id: '',
+        driver_id: '',
         note: '',
     });
 
     const selectedTruck = truckUnits.find(
         (t) => String(t.id) === data.truck_id,
     );
-    const driverName = selectedTruck?.defaultDriver?.user.name ?? '-';
+    const defaultDriverName = selectedTruck?.defaultDriver?.user.name ?? null;
+
+    function selectTruck(truckId: string) {
+        setData('truck_id', truckId);
+        const truck = truckUnits.find((t) => String(t.id) === truckId);
+        const defaultDriverId = truck?.default_driver_id;
+        setData(
+            'driver_id',
+            defaultDriverId != null ? String(defaultDriverId) : '',
+        );
+    }
 
     function submit(e: FormEvent) {
         e.preventDefault();
@@ -589,13 +609,11 @@ function QuickAssignModal({
                 <form onSubmit={submit} className="mt-5 space-y-4">
                     <div>
                         <label className="mb-2 block text-sm font-semibold text-heading">
-                            Armada & Driver
+                            Armada
                         </label>
                         <select
                             value={data.truck_id}
-                            onChange={(e) =>
-                                setData('truck_id', e.target.value)
-                            }
+                            onChange={(e) => selectTruck(e.target.value)}
                             className="input w-full"
                         >
                             <option value="">Pilih armada</option>
@@ -605,9 +623,7 @@ function QuickAssignModal({
                                     {truck.capacity_liters.toLocaleString(
                                         'id-ID',
                                     )}{' '}
-                                    L) —{' '}
-                                    {truck.defaultDriver?.user.name ??
-                                        'Tanpa driver'}
+                                    L)
                                 </option>
                             ))}
                         </select>
@@ -622,14 +638,46 @@ function QuickAssignModal({
                         )}
                     </div>
 
-                    {selectedTruck && (
-                        <div className="rounded-sm bg-neutral-tertiary-soft px-4 py-3 text-sm">
-                            <span className="text-body-subtle">Driver: </span>
-                            <span className="font-semibold text-heading">
-                                {driverName}
-                            </span>
-                        </div>
-                    )}
+                    <div>
+                        <label className="mb-2 block text-sm font-semibold text-heading">
+                            Driver
+                        </label>
+                        <select
+                            value={data.driver_id}
+                            onChange={(e) =>
+                                setData('driver_id', e.target.value)
+                            }
+                            className="input w-full"
+                            disabled={!selectedTruck}
+                        >
+                            <option value="">
+                                {defaultDriverName
+                                    ? `Driver default (${defaultDriverName})`
+                                    : 'Pilih driver'}
+                            </option>
+                            {drivers.map((driver) => {
+                                const isDefault =
+                                    selectedTruck?.default_driver_id ===
+                                    driver.id;
+
+                                return (
+                                    <option
+                                        key={driver.id}
+                                        value={String(driver.id)}
+                                    >
+                                        {driver.user.name}
+                                        {isDefault ? ' (Default)' : ''}
+                                    </option>
+                                );
+                            })}
+                        </select>
+                        {errors.driver_id && (
+                            <FieldError message={errors.driver_id} />
+                        )}
+                        <p className="mt-1 text-xs text-body-subtle">
+                            Pilihan pertama memakai driver default truk.
+                        </p>
+                    </div>
 
                     <div>
                         <label

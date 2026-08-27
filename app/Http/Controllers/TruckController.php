@@ -52,8 +52,8 @@ class TruckController extends Controller
 
     public function toggle(Truck $truck): RedirectResponse
     {
-        if ($truck->status->is(TruckStatus::Assigned)) {
-            return back()->with('error', 'Armada sedang bertugas, status tidak dapat diubah.');
+        if ($truck->deliveries()->active()->exists()) {
+            return back()->with('error', 'Armada memiliki tugas aktif, status tidak dapat diubah.');
         }
 
         $truck->update([
@@ -67,8 +67,8 @@ class TruckController extends Controller
 
     public function destroy(Truck $truck): RedirectResponse
     {
-        if ($truck->status->is(TruckStatus::Assigned)) {
-            return back()->with('error', 'Armada sedang bertugas, tidak dapat dinonaktifkan.');
+        if ($truck->deliveries()->active()->exists()) {
+            return back()->with('error', 'Armada memiliki tugas aktif, tidak dapat dinonaktifkan.');
         }
 
         $truck->update([
