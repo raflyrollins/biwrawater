@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\Storage;
 
 uses(RefreshDatabase::class);
 
-test('admin menugaskan truk dan driver ke pesanan yang sudah dibayar', function () {
+test('admin menugaskan truk ke pesanan yang sudah dibayar', function () {
     $admin = User::factory()->admin()->create();
     $zone = Zone::factory()->create(['delivery_fee' => 0]);
     $order = Order::factory()->create([
@@ -26,13 +26,12 @@ test('admin menugaskan truk dan driver ke pesanan yang sudah dibayar', function 
         'payment_status' => PaymentStatus::Paid,
         'zone_id' => $zone->id,
     ]);
-    $truck = Truck::factory()->create();
     $driver = Driver::factory()->create();
+    $truck = Truck::factory()->create(['default_driver_id' => $driver->id]);
 
     $this->actingAs($admin)
         ->post("/dashboard/orders/{$order->uuid}/assign", [
             'truck_id' => $truck->id,
-            'driver_id' => $driver->id,
             'note' => 'Hubungi pelanggan sebelum tiba',
         ])
         ->assertRedirect()
@@ -44,7 +43,8 @@ test('admin menugaskan truk dan driver ke pesanan yang sudah dibayar', function 
         ->and($order->delivery)->not->toBeNull()
         ->and($order->delivery->status)->toBe(DeliveryStatus::Scheduled)
         ->and($order->delivery->truck_id)->toBe($truck->id)
-        ->and($order->delivery->driver_id)->toBe($driver->id);
+        ->and($order->delivery->driver_id)->toBe($driver->id)
+        ->and($truck->refresh()->status)->toBe(TruckStatus::Assigned);
 });
 
 test('penugasan ditolak ketika pesanan sudah memiliki pengiriman aktif', function () {
@@ -56,28 +56,23 @@ test('penugasan ditolak ketika pesanan sudah memiliki pengiriman aktif', functio
         'zone_id' => $zone->id,
     ]);
     $truck = Truck::factory()->create();
-    $driverUser = User::factory()->driver()->create();
-    $driver = Driver::factory()->for($driverUser)->create();
+    $driver = Driver::factory()->create();
 
     $delivery = Delivery::factory()->for($order)->for($truck)->for($driver)->create([
-        'status' => DeliveryStatus::Accepted,
-        'scheduled_at' => now()->addHour(),
+        'status' => DeliveryStatus::Scheduled,
+        'scheduled_at' => now(),
     ]);
 
     $otherTruck = Truck::factory()->create();
-    $otherDriverUser = User::factory()->driver()->create();
-    $otherDriver = Driver::factory()->for($otherDriverUser)->create();
 
     $this->actingAs($admin)
         ->post("/dashboard/orders/{$order->uuid}/assign", [
             'truck_id' => $otherTruck->id,
-            'driver_id' => $otherDriver->id,
         ])
         ->assertRedirect()
         ->assertSessionHas('error');
 
     expect($order->refresh()->delivery->id)->toBe($delivery->id)
-        ->and($order->delivery->driver_id)->toBe($driver->id)
         ->and($order->delivery()->count())->toBe(1);
 });
 
@@ -96,22 +91,24 @@ test('driver memproses rantai pengiriman COD sampai selesai dengan foto bukti', 
 
     $delivery = Delivery::factory()->for($order)->for($truck)->for($driver)->create([
         'status' => DeliveryStatus::Scheduled,
-        'scheduled_at' => now()->addHour(),
+        'scheduled_at' => now(),
     ]);
 
+    // In real flow, assign() locks the truck
+    $truck->update(['status' => TruckStatus::Assigned]);
+
+    // Driver langsung mulai pengisian (tidak perlu accept)
     $this->actingAs($driverUser)
-        ->post("/dashboard/deliveries/{$delivery->uuid}/accept")
+        ->post("/dashboard/deliveries/{$delivery->uuid}/fill")
         ->assertRedirect()
         ->assertSessionHas('success');
 
-    expect($delivery->refresh()->status)->toBe(DeliveryStatus::Accepted)
+    expect($delivery->refresh()->status)->toBe(DeliveryStatus::Filling)
+        ->and($delivery->filling_started_at)->not->toBeNull()
         ->and($order->refresh()->status)->toBe(OrderStatus::Confirmed)
         ->and($truck->refresh()->status)->toBe(TruckStatus::Assigned)
         ->and($driver->refresh()->status)->toBe(DriverStatus::OnDuty);
 
-    $this->post("/dashboard/deliveries/{$delivery->uuid}/fill")
-        ->assertRedirect()
-        ->assertSessionHas('success');
     $this->post("/dashboard/deliveries/{$delivery->uuid}/depart")
         ->assertRedirect()
         ->assertSessionHas('success');
@@ -158,32 +155,6 @@ test('driver memproses rantai pengiriman COD sampai selesai dengan foto bukti', 
         ->and($driver->refresh()->status)->toBe(DriverStatus::Available);
 });
 
-test('driver menolak tugas sehingga pesanan kembali ke antrean penugasan', function () {
-    $order = Order::factory()->create([
-        'status' => OrderStatus::Confirmed,
-        'payment_status' => PaymentStatus::Paid,
-    ]);
-    $truck = Truck::factory()->create();
-    $driverUser = User::factory()->driver()->create();
-    $driver = Driver::factory()->for($driverUser)->create();
-
-    $delivery = Delivery::factory()->for($order)->for($truck)->for($driver)->create([
-        'status' => DeliveryStatus::Scheduled,
-        'scheduled_at' => now()->addHour(),
-    ]);
-
-    $this->actingAs($driverUser)
-        ->post("/dashboard/deliveries/{$delivery->uuid}/reject")
-        ->assertRedirect()
-        ->assertSessionHas('success');
-
-    expect($delivery->refresh()->status)->toBe(DeliveryStatus::Failed)
-        ->and($order->refresh()->status)->toBe(OrderStatus::Confirmed)
-        ->and($order->payment_status)->toBe(PaymentStatus::Paid)
-        ->and($truck->refresh()->status)->toBe(TruckStatus::Available)
-        ->and($driver->refresh()->status)->toBe(DriverStatus::Available);
-});
-
 test('pengiriman gagal mengembalikan pesanan ke antrean penugasan', function () {
     $order = Order::factory()->create([
         'status' => OrderStatus::Confirmed,
@@ -195,7 +166,7 @@ test('pengiriman gagal mengembalikan pesanan ke antrean penugasan', function () 
 
     $delivery = Delivery::factory()->for($order)->for($truck)->for($driver)->create([
         'status' => DeliveryStatus::OnTheWay,
-        'scheduled_at' => now()->addHour(),
+        'scheduled_at' => now(),
     ]);
 
     $this->actingAs($driverUser)
@@ -218,8 +189,8 @@ test('pengiriman gagal lama digantikan saat penugasan ulang', function () {
         'status' => OrderStatus::Confirmed,
         'payment_status' => PaymentStatus::Paid,
     ]);
-    $truck = Truck::factory()->create();
     $driver = Driver::factory()->create();
+    $truck = Truck::factory()->create(['default_driver_id' => $driver->id]);
 
     Delivery::factory()->for($order)->create([
         'status' => DeliveryStatus::Failed,
@@ -228,8 +199,6 @@ test('pengiriman gagal lama digantikan saat penugasan ulang', function () {
     $this->actingAs($admin)
         ->post("/dashboard/orders/{$order->uuid}/assign", [
             'truck_id' => $truck->id,
-            'driver_id' => $driver->id,
-            'scheduled_at' => now()->addHour()->format('Y-m-d H:i:s'),
         ])
         ->assertRedirect()
         ->assertSessionHas('success');
@@ -242,7 +211,6 @@ test('driver tidak dapat mengubah pengiriman milik driver lain', function () {
     $order = Order::factory()->create();
     $truck = Truck::factory()->create();
     $otherDriver = Driver::factory()->create();
-    $otherUser = $otherDriver->user;
     $intruder = Driver::factory()->create();
 
     $delivery = Delivery::factory()->for($order)->for($truck)->for($otherDriver)->create([
@@ -250,7 +218,7 @@ test('driver tidak dapat mengubah pengiriman milik driver lain', function () {
     ]);
 
     $this->actingAs($intruder->user)
-        ->post("/dashboard/deliveries/{$delivery->uuid}/accept")
+        ->post("/dashboard/deliveries/{$delivery->uuid}/fill")
         ->assertNotFound();
 });
 
@@ -283,14 +251,80 @@ test('penugasan ditolak untuk pesanan yang belum dibayar', function () {
         'payment_status' => PaymentStatus::Unpaid,
     ]);
     $truck = Truck::factory()->create();
-    $driver = Driver::factory()->create();
 
     $this->actingAs($admin)
         ->post("/dashboard/orders/{$order->uuid}/assign", [
             'truck_id' => $truck->id,
-            'driver_id' => $driver->id,
-            'scheduled_at' => now()->addHour()->format('Y-m-d H:i:s'),
         ])
         ->assertRedirect()
         ->assertSessionHas('error');
+});
+
+test('admin membatalkan delivery scheduled', function () {
+    $admin = User::factory()->admin()->create();
+    $order = Order::factory()->create([
+        'status' => OrderStatus::Confirmed,
+        'payment_status' => PaymentStatus::Paid,
+    ]);
+    $truck = Truck::factory()->create();
+    $driver = Driver::factory()->create();
+
+    $delivery = Delivery::factory()->for($order)->for($truck)->for($driver)->create([
+        'status' => DeliveryStatus::Scheduled,
+        'scheduled_at' => now(),
+    ]);
+
+    $truck->update(['status' => TruckStatus::Assigned]);
+
+    $this->actingAs($admin)
+        ->post("/dashboard/deliveries/{$delivery->uuid}/cancel-scheduled")
+        ->assertRedirect()
+        ->assertSessionHas('success');
+
+    $order->refresh();
+    $delivery->refresh();
+
+    expect($delivery->status)->toBe(DeliveryStatus::Failed)
+        ->and($delivery->note)->toContain('Dibatalkan admin')
+        ->and($order->status)->toBe(OrderStatus::Confirmed)
+        ->and($truck->refresh()->status)->toBe(TruckStatus::Available);
+});
+
+test('admin tidak dapat membatalkan delivery yang sudah filling', function () {
+    $admin = User::factory()->admin()->create();
+    $order = Order::factory()->create();
+    $truck = Truck::factory()->create();
+    $driver = Driver::factory()->create();
+
+    $delivery = Delivery::factory()->for($order)->for($truck)->for($driver)->create([
+        'status' => DeliveryStatus::Filling,
+        'scheduled_at' => now(),
+    ]);
+
+    $this->actingAs($admin)
+        ->post("/dashboard/deliveries/{$delivery->uuid}/cancel-scheduled")
+        ->assertRedirect()
+        ->assertSessionHas('error');
+});
+
+test('admin mengganti driver pada delivery scheduled', function () {
+    $admin = User::factory()->admin()->create();
+    $order = Order::factory()->create();
+    $truck = Truck::factory()->create();
+    $driver1 = Driver::factory()->create();
+    $driver2 = Driver::factory()->create();
+
+    $delivery = Delivery::factory()->for($order)->for($truck)->for($driver1)->create([
+        'status' => DeliveryStatus::Scheduled,
+        'scheduled_at' => now(),
+    ]);
+
+    $this->actingAs($admin)
+        ->post("/dashboard/deliveries/{$delivery->uuid}/reassign-driver", [
+            'driver_id' => $driver2->id,
+        ])
+        ->assertRedirect()
+        ->assertSessionHas('success');
+
+    expect($delivery->refresh()->driver_id)->toBe($driver2->id);
 });

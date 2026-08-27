@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-interface AutocompleteItem {
+export interface AutocompleteItem {
     kecamatan: string;
     kelurahan: string;
     city: string;
@@ -20,6 +20,8 @@ interface AutocompleteProps {
     required?: boolean;
     disabled?: boolean;
     name: string;
+    displayField?: 'city' | 'kecamatan' | 'kelurahan';
+    filterParams?: Record<string, string>;
     onBlur?: () => void;
 }
 
@@ -33,6 +35,8 @@ export default function Autocomplete({
     required,
     disabled,
     name,
+    displayField = 'kelurahan',
+    filterParams,
     onBlur,
 }: AutocompleteProps) {
     const [isOpen, setIsOpen] = useState(false);
@@ -43,27 +47,40 @@ export default function Autocomplete({
     const inputRef = useRef<HTMLInputElement>(null);
     const wrapperRef = useRef<HTMLDivElement>(null);
 
-    const search = useCallback(async (q: string) => {
-        if (q.length < 2) {
-            setSuggestions([]);
-            return;
-        }
+    useEffect(() => {
+        setQuery(value);
+    }, [value]);
 
-        setIsLoading(true);
-        try {
-            const response = await fetch(
-                `/area/search?q=${encodeURIComponent(q)}`,
-            );
-            if (response.ok) {
-                const data: AutocompleteItem[] = await response.json();
-                setSuggestions(data);
+    const search = useCallback(
+        async (q: string) => {
+            if (q.length < 2) {
+                setSuggestions([]);
+                return;
             }
-        } catch {
-            setSuggestions([]);
-        } finally {
-            setIsLoading(false);
-        }
-    }, []);
+
+            setIsLoading(true);
+            try {
+                const params = new URLSearchParams({ q });
+                if (filterParams) {
+                    for (const [k, v] of Object.entries(filterParams)) {
+                        if (v) params.set(k, v);
+                    }
+                }
+                const response = await fetch(
+                    `/area/search?${params.toString()}`,
+                );
+                if (response.ok) {
+                    const data: AutocompleteItem[] = await response.json();
+                    setSuggestions(data);
+                }
+            } catch {
+                setSuggestions([]);
+            } finally {
+                setIsLoading(false);
+            }
+        },
+        [filterParams],
+    );
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -93,8 +110,9 @@ export default function Autocomplete({
     };
 
     const handleSelect = (item: AutocompleteItem) => {
-        setQuery(item.kelurahan);
-        onChange(item.kelurahan);
+        const display = item[displayField];
+        setQuery(display);
+        onChange(display);
         onSelect?.(item);
         setIsOpen(false);
     };
@@ -181,14 +199,16 @@ export default function Autocomplete({
                             Mencari...
                         </li>
                     )}
-                    {!isLoading && suggestions.length === 0 && query.length >= 2 && (
-                        <li className="px-4 py-3 text-center text-sm text-body-subtle">
-                            Tidak ditemukan kecamatan/kelurahan
-                        </li>
-                    )}
+                    {!isLoading &&
+                        suggestions.length === 0 &&
+                        query.length >= 2 && (
+                            <li className="px-4 py-3 text-center text-sm text-body-subtle">
+                                Tidak ditemukan
+                            </li>
+                        )}
                     {suggestions.map((item, index) => (
                         <li
-                            key={`${item.kecamatan}-${item.kelurahan}`}
+                            key={`${item.kecamatan}-${item.kelurahan}-${item.city}`}
                             role="option"
                             aria-selected={index === selectedIndex}
                             className={cn(
@@ -214,7 +234,10 @@ export default function Autocomplete({
                                     </span>
                                 ) : (
                                     <span className="ml-2 text-fg-brand">
-                                        +Rp{item.delivery_fee.toLocaleString('id-ID')}
+                                        +Rp
+                                        {item.delivery_fee.toLocaleString(
+                                            'id-ID',
+                                        )}
                                     </span>
                                 )}
                             </div>

@@ -220,12 +220,14 @@ function ZoneFormModal({ editing, onClose }: ZoneFormModalProps) {
                             </label>
                             <input
                                 id="zone-delivery-fee"
-                                type="number"
-                                min="0"
-                                step="1000"
+                                type="text"
+                                inputMode="numeric"
                                 value={data.delivery_fee}
                                 onChange={(e) =>
-                                    setData('delivery_fee', e.target.value)
+                                    setData(
+                                        'delivery_fee',
+                                        e.target.value.replace(/[^0-9]/g, ''),
+                                    )
                                 }
                                 className={cn(
                                     'input',

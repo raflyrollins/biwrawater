@@ -69,6 +69,30 @@ test('admin diarahkan ke ringkasan di dashboard', function () {
         ->assertInertia(fn (Assert $page) => $page->component('dashboard/Summary'));
 });
 
+test('jadwal pengiriman di ringkasan menyertakan uuid pesanan', function () {
+    $admin = User::factory()->admin()->create();
+    $order = Order::factory()->create([
+        'status' => OrderStatus::Confirmed,
+        'payment_status' => PaymentStatus::Paid,
+    ]);
+    Delivery::factory()
+        ->for($order)
+        ->for(Truck::factory()->create())
+        ->for(Driver::factory()->create())
+        ->create([
+            'status' => DeliveryStatus::Scheduled,
+            'scheduled_at' => now()->addHour(),
+        ]);
+
+    $this->actingAs($admin)
+        ->get('/dashboard')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('dashboard/Summary')
+            ->has('todaySchedule', 1)
+            ->where('todaySchedule.0.order.uuid', $order->uuid));
+});
+
 test('admin dapat mengakses daftar pesanan', function () {
     $this->actingAs(User::factory()->admin()->create())
         ->get('/dashboard/orders')

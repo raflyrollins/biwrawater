@@ -37,7 +37,7 @@ class DeliveryService
                 ])
                 ->where('driver_id', $driver->id)
                 ->active()
-                ->orderBy('created_at') // FIFO by creation time
+                ->orderBy('scheduled_at')
                 ->get(),
             'history' => Delivery::query()
                 ->with(['order:id,order_number,status'])
@@ -50,10 +50,11 @@ class DeliveryService
     }
 
     /**
-     * Tugaskan truk dan driver ke pesanan yang sudah dikonfirmasi dan lunas.
-     * Menggunakan antrian FIFO (berdasarkan waktu pembayaran).
+     * Tugaskan truk ke pesanan yang sudah dikonfirmasi dan lunas.
+     * Driver diambil dari default_driver truk.
+     * Truk langsung di-assign (locked), driver belum di-lock.
      */
-    public function assign(Order $order, Truck $truck, Driver $driver, ?string $note = null): Delivery
+    public function assign(Order $order, Truck $truck, ?string $note = null): Delivery
     {
         if (! $order->status->is(OrderStatus::Confirmed) || ! $order->payment_status->is(PaymentStatus::Paid)) {
             throw new RuntimeException('Hanya pesanan terkonfirmasi dan sudah dibayar yang dapat ditugaskan.');
@@ -67,20 +68,22 @@ class DeliveryService
 
         $order->delivery()->where('status', DeliveryStatus::Failed)->delete();
 
-        // Calculate delivery fee from zone
         $deliveryFee = $order->zone->delivery_fee ?? 0;
 
         $delivery = $order->delivery()->create([
             'truck_id' => $truck->id,
-            'driver_id' => $driver->id,
+            'driver_id' => $truck->default_driver_id,
             'status' => DeliveryStatus::Scheduled,
+            'scheduled_at' => now(),
             'note' => $note,
         ]);
 
-        // Update order with delivery fee
         $order->update([
             'delivery_fee' => $deliveryFee,
         ]);
+
+        // Lock truck only (driver locked at filling time)
+        $truck->update(['status' => TruckStatus::Assigned]);
 
         DeliveryStatusChanged::dispatch($delivery, DeliveryStatus::None);
 
@@ -88,51 +91,12 @@ class DeliveryService
     }
 
     /**
-     * Driver menerima tugas; armada dan driver langsung dikunci untuk pengiriman ini.
-     */
-    public function accept(Delivery $delivery): void
-    {
-        if (! $delivery->status->is(DeliveryStatus::Scheduled)) {
-            throw new RuntimeException('Hanya tugas terjadwal yang dapat diterima.');
-        }
-
-        $delivery->update([
-            'status' => DeliveryStatus::Accepted,
-        ]);
-
-        DeliveryStatusChanged::dispatch($delivery, DeliveryStatus::Scheduled);
-
-        $this->occupyResources($delivery);
-    }
-
-    /**
-     * Driver menolak tugas; pesanan kembali ke antrean penugasan admin.
-     */
-    public function reject(Delivery $delivery): void
-    {
-        if (! $delivery->status->is(DeliveryStatus::Scheduled)) {
-            throw new RuntimeException('Tugas yang sudah diterima tidak dapat ditolak. Gunakan opsi gagal.');
-        }
-
-        $previousStatus = $delivery->status;
-
-        $delivery->update([
-            'status' => DeliveryStatus::Failed,
-            'note' => trim(($delivery->note !== null ? $delivery->note.' ' : '').'[Ditolak oleh driver]'),
-        ]);
-
-        DeliveryStatusChanged::dispatch($delivery, $previousStatus);
-
-        $this->releaseResources($delivery);
-    }
-
-    /**
-     * Air mulai diisi ke tangki truk.
+     * Air mulai diisi ke tangki truk. Driver di-lock saat ini.
      */
     public function startFilling(Delivery $delivery): void
     {
-        if (! $delivery->status->is(DeliveryStatus::Accepted)) {
-            throw new RuntimeException('Terima tugas terlebih dahulu sebelum memulai pengisian.');
+        if (! $delivery->status->is(DeliveryStatus::Scheduled)) {
+            throw new RuntimeException('Hanya tugas terjadwal yang dapat dimulai pengisiannya.');
         }
 
         $delivery->update([
@@ -140,7 +104,12 @@ class DeliveryService
             'filling_started_at' => now(),
         ]);
 
-        DeliveryStatusChanged::dispatch($delivery, DeliveryStatus::Accepted);
+        // Lock driver at filling time
+        $delivery->driver?->update([
+            'status' => DriverStatus::OnDuty,
+        ]);
+
+        DeliveryStatusChanged::dispatch($delivery, DeliveryStatus::Scheduled);
     }
 
     /**
@@ -232,14 +201,13 @@ class DeliveryService
     }
 
     /**
-     * Tandai pengiriman gagal; pesanan kembali menunggu penugasan ulang
-     * (status tetap dikonfirmasi karena sudah dibayar).
+     * Tandai pengiriman gagal; pesanan kembali menunggu penugasan ulang.
      */
     public function fail(Delivery $delivery): void
     {
         $inProgress = in_array(
             $delivery->status,
-            [DeliveryStatus::Accepted, DeliveryStatus::Filling, DeliveryStatus::OnTheWay, DeliveryStatus::Unloading],
+            [DeliveryStatus::Filling, DeliveryStatus::OnTheWay, DeliveryStatus::Unloading],
             true,
         );
 
@@ -262,14 +230,46 @@ class DeliveryService
         $this->releaseResources($delivery);
     }
 
-    private function occupyResources(Delivery $delivery): void
+    /**
+     * Batalkan delivery yang masih scheduled (belum mulai diisi).
+     * Pesanan kembali ke antrian, truk + driver terbuka.
+     */
+    public function cancelScheduled(Delivery $delivery): void
     {
-        $delivery->truck?->update([
-            'status' => TruckStatus::Assigned,
+        if (! $delivery->status->is(DeliveryStatus::Scheduled)) {
+            throw new RuntimeException('Hanya tugas terjadwal yang dapat dibatalkan.');
+        }
+
+        $previousStatus = $delivery->status;
+
+        $delivery->update([
+            'status' => DeliveryStatus::Failed,
+            'note' => trim(($delivery->note !== null ? $delivery->note.' ' : '').'[Dibatalkan admin]'),
         ]);
-        $delivery->driver?->update([
-            'status' => DriverStatus::OnDuty,
+        $delivery->order->update([
+            'status' => OrderStatus::Confirmed,
         ]);
+
+        DeliveryStatusChanged::dispatch($delivery, $previousStatus);
+        OrderStatusChanged::dispatch($delivery->order, OrderStatus::Confirmed);
+
+        $this->releaseResources($delivery);
+    }
+
+    /**
+     * Ganti driver pada delivery yang masih scheduled.
+     */
+    public function reassignDriver(Delivery $delivery, Driver $newDriver): void
+    {
+        if (! $delivery->status->is(DeliveryStatus::Scheduled)) {
+            throw new RuntimeException('Hanya tugas terjadwal yang dapat diganti driver-nya.');
+        }
+
+        $delivery->update([
+            'driver_id' => $newDriver->id,
+        ]);
+
+        DeliveryStatusChanged::dispatch($delivery, DeliveryStatus::Scheduled);
     }
 
     private function releaseResources(Delivery $delivery): void

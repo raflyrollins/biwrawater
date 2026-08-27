@@ -230,16 +230,14 @@ function PromotionFormModal({ editing, onClose }: PromotionFormModalProps) {
                             </label>
                             <input
                                 id="promo-value"
-                                type="number"
-                                min="1"
-                                step={
-                                    data.discount_type === 'percentage'
-                                        ? '1'
-                                        : '1000'
-                                }
+                                type="text"
+                                inputMode="numeric"
                                 value={data.discount_value}
                                 onChange={(e) =>
-                                    setData('discount_value', e.target.value)
+                                    setData(
+                                        'discount_value',
+                                        e.target.value.replace(/[^0-9]/g, ''),
+                                    )
                                 }
                                 className={cn(
                                     'input',
@@ -260,14 +258,13 @@ function PromotionFormModal({ editing, onClose }: PromotionFormModalProps) {
                             </label>
                             <input
                                 id="promo-min-subtotal"
-                                type="number"
-                                min="0"
-                                step="1000"
+                                type="text"
+                                inputMode="numeric"
                                 value={data.min_order_subtotal}
                                 onChange={(e) =>
                                     setData(
                                         'min_order_subtotal',
-                                        e.target.value,
+                                        e.target.value.replace(/[^0-9]/g, ''),
                                     )
                                 }
                                 className={cn(
@@ -287,14 +284,13 @@ function PromotionFormModal({ editing, onClose }: PromotionFormModalProps) {
                             </label>
                             <input
                                 id="promo-max-discount"
-                                type="number"
-                                min="0"
-                                step="1000"
+                                type="text"
+                                inputMode="numeric"
                                 value={data.max_discount_amount}
                                 onChange={(e) =>
                                     setData(
                                         'max_discount_amount',
-                                        e.target.value,
+                                        e.target.value.replace(/[^0-9]/g, ''),
                                     )
                                 }
                                 className={cn(

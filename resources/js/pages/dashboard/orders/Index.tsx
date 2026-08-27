@@ -26,6 +26,7 @@ interface AdminOrder {
     created_at: string;
     user: { name: string };
     delivery: { status: string | null } | null;
+    items: { volume_liters: number | null; quantity: number }[];
 }
 
 interface OrdersIndexProps {
@@ -142,6 +143,7 @@ export default function OrdersIndex({ orders, filters }: OrdersIndexProps) {
                                     <tr>
                                         <th>No. Pesanan</th>
                                         <th>Pelanggan</th>
+                                        <th>Volume</th>
                                         <th>Tanggal</th>
                                         <th>Status</th>
                                         <th>Pengiriman</th>
@@ -162,6 +164,18 @@ export default function OrdersIndex({ orders, filters }: OrdersIndexProps) {
                                                 </Link>
                                             </td>
                                             <td>{order.user.name}</td>
+                                            <td>
+                                                <span className="text-sm font-semibold text-heading">
+                                                    {(() => {
+                                                        const total = order.items?.reduce(
+                                                            (sum, item) => sum + (item.volume_liters ?? 0) * item.quantity,
+                                                            0,
+                                                        ) ?? 0;
+
+                                                        return total > 0 ? `${total.toLocaleString('id-ID')} L` : '-';
+                                                    })()}
+                                                </span>
+                                            </td>
                                             <td>
                                                 {formatDate(order.created_at)}
                                             </td>

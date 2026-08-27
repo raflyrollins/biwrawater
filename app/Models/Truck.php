@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 use Ramsey\Uuid\Uuid;
@@ -20,6 +21,7 @@ use Ramsey\Uuid\Uuid;
  * @property int $capacity_liters
  * @property TruckStatus $status
  * @property string|null $notes
+ * @property int|null $default_driver_id
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -29,6 +31,7 @@ use Ramsey\Uuid\Uuid;
     'capacity_liters',
     'status',
     'notes',
+    'default_driver_id',
 ])]
 class Truck extends Model
 {
@@ -76,5 +79,13 @@ class Truck extends Model
     public function deliveries(): HasMany
     {
         return $this->hasMany(Delivery::class);
+    }
+
+    /**
+     * @return BelongsTo<Driver, $this>
+     */
+    public function defaultDriver(): BelongsTo
+    {
+        return $this->belongsTo(Driver::class, 'default_driver_id');
     }
 }

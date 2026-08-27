@@ -4,10 +4,7 @@ import { ArrowLeft, Clock } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import AssignDeliveryForm from '../../../components/dashboard/AssignDeliveryForm';
-import type {
-    AssignDriver,
-    AssignTruck,
-} from '../../../components/dashboard/AssignDeliveryForm';
+import type { AssignTruck } from '../../../components/dashboard/AssignDeliveryForm';
 import DashboardLayout from '../../../components/dashboard/DashboardLayout';
 import StatusBadge from '../../../components/dashboard/StatusBadge';
 import { useConfirm } from '../../../components/ui/ConfirmDialog';
@@ -42,6 +39,7 @@ interface OrderDetail {
     payment_due_passed: boolean;
     subtotal: number;
     discount_total: number;
+    delivery_fee: number;
     grand_total: number;
     customer_note: string | null;
     created_at: string;
@@ -72,7 +70,6 @@ interface OrderShowProps {
     order: OrderDetail;
     assignOptions: {
         trucks: AssignTruck[];
-        drivers: AssignDriver[];
     };
 }
 
@@ -243,8 +240,11 @@ export default function OrderShow({ order, assignOptions }: OrderShowProps) {
                             !hasActiveDelivery && (
                                 <AssignDeliveryForm
                                     orderUuid={order.uuid}
+                                    totalLiters={order.items.reduce(
+                                        (sum, item) => sum + (item.volume_liters ?? 0) * item.quantity,
+                                        0,
+                                    )}
                                     trucks={assignOptions.trucks}
-                                    drivers={assignOptions.drivers}
                                 />
                             )}
 
@@ -410,6 +410,16 @@ export default function OrderShow({ order, assignOptions }: OrderShowProps) {
                                         <span className="font-semibold text-success-strong">
                                             -
                                             {formatRupiah(order.discount_total)}
+                                        </span>
+                                    </div>
+                                )}
+                                {order.delivery_fee > 0 && (
+                                    <div className="flex justify-between">
+                                        <span className="text-body-subtle">
+                                            Biaya Kirim
+                                        </span>
+                                        <span className="text-heading">
+                                            {formatRupiah(order.delivery_fee)}
                                         </span>
                                     </div>
                                 )}

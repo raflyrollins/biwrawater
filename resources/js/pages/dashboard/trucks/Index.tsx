@@ -8,7 +8,6 @@ import type { FormEvent, ReactNode } from 'react';
 import DashboardLayout from '../../../components/dashboard/DashboardLayout';
 import Pagination from '../../../components/dashboard/Pagination';
 import type { PaginationLink } from '../../../components/dashboard/Pagination';
-import StatusBadge from '../../../components/dashboard/StatusBadge';
 import FieldError from '../../../components/public/FieldError';
 import { useConfirm } from '../../../components/ui/ConfirmDialog';
 import { STATUS_LABELS } from '../../../lib/labels';
@@ -28,6 +27,10 @@ interface Truck {
     capacity_liters: number;
     status: string;
     notes: string | null;
+    default_driver_id: number | null;
+    defaultDriver: {
+        user: { name: string };
+    } | null;
 }
 
 interface TrucksIndexProps {
@@ -35,6 +38,10 @@ interface TrucksIndexProps {
         data: Truck[];
         links: PaginationLink[];
     };
+    drivers: {
+        id: number;
+        user: { name: string };
+    }[];
 }
 
 interface FormValues {
@@ -42,6 +49,7 @@ interface FormValues {
     name: string;
     capacity_liters: string;
     notes: string;
+    default_driver_id: string;
 }
 
 const EMPTY_FORM: FormValues = {
@@ -49,6 +57,7 @@ const EMPTY_FORM: FormValues = {
     name: '',
     capacity_liters: '',
     notes: '',
+    default_driver_id: '',
 };
 
 function toForm(truck: Truck | null): FormValues {
@@ -61,16 +70,20 @@ function toForm(truck: Truck | null): FormValues {
         name: truck.name,
         capacity_liters: String(truck.capacity_liters),
         notes: truck.notes ?? '',
+        default_driver_id: truck.default_driver_id
+            ? String(truck.default_driver_id)
+            : '',
     };
 }
 
 interface TruckFormModalProps {
     editing: Truck | null;
+    drivers: { id: number; user: { name: string } }[];
     onClose: () => void;
 }
 
-function TruckFormModal({ editing, onClose }: TruckFormModalProps) {
-    const { data, setData, errors, processing, post, put, reset } = useForm(
+function TruckFormModal({ editing, drivers, onClose }: TruckFormModalProps) {
+    const { data, setData, errors, processing, post, reset } = useForm(
         toForm(editing),
     );
 
@@ -78,7 +91,7 @@ function TruckFormModal({ editing, onClose }: TruckFormModalProps) {
         e.preventDefault();
 
         if (editing) {
-            put(updateTruck.url({ truck: editing.uuid }));
+            post(updateTruck.url({ truck: editing.uuid }));
         } else {
             post(storeTruck.url());
         }
@@ -173,12 +186,14 @@ function TruckFormModal({ editing, onClose }: TruckFormModalProps) {
                         </label>
                         <input
                             id="truck-capacity"
-                            type="number"
-                            min="1"
-                            step="100"
+                            type="text"
+                            inputMode="numeric"
                             value={data.capacity_liters}
                             onChange={(e) =>
-                                setData('capacity_liters', e.target.value)
+                                setData(
+                                    'capacity_liters',
+                                    e.target.value.replace(/[^0-9]/g, ''),
+                                )
                             }
                             className={cn(
                                 'input',
@@ -207,6 +222,37 @@ function TruckFormModal({ editing, onClose }: TruckFormModalProps) {
                             placeholder="cth: Servis rutin tiap 10.000 km"
                         />
                         <FieldError message={errors.notes} />
+                    </div>
+
+                    <div>
+                        <label
+                            htmlFor="truck-driver"
+                            className="mb-2 block text-sm font-semibold text-heading"
+                        >
+                            Driver Default
+                        </label>
+                        <select
+                            id="truck-driver"
+                            value={data.default_driver_id}
+                            onChange={(e) =>
+                                setData('default_driver_id', e.target.value)
+                            }
+                            className={cn(
+                                'input w-full',
+                                errors.default_driver_id && 'input-error',
+                            )}
+                        >
+                            <option value="">Tanpa driver</option>
+                            {drivers.map((driver) => (
+                                <option
+                                    key={driver.id}
+                                    value={String(driver.id)}
+                                >
+                                    {driver.user.name}
+                                </option>
+                            ))}
+                        </select>
+                        <FieldError message={errors.default_driver_id} />
                     </div>
 
                     <div className="flex justify-end gap-3">
@@ -242,7 +288,7 @@ function RowValue({ label, children }: { label: string; children: ReactNode }) {
     );
 }
 
-export default function TrucksIndex({ trucks }: TrucksIndexProps) {
+export default function TrucksIndex({ trucks, drivers }: TrucksIndexProps) {
     const [modalOpen, setModalOpen] = useState(false);
     const [editing, setEditing] = useState<Truck | null>(null);
 
@@ -355,8 +401,8 @@ export default function TrucksIndex({ trucks }: TrucksIndexProps) {
                                     )}{' '}
                                     liter
                                 </RowValue>
-                                <RowValue label="Status">
-                                    <StatusBadge status={truck.status} />
+                                <RowValue label="Driver Default">
+                                    {truck.defaultDriver?.user.name ?? '-'}
                                 </RowValue>
                             </div>
 
@@ -386,6 +432,7 @@ export default function TrucksIndex({ trucks }: TrucksIndexProps) {
             {modalOpen && (
                 <TruckFormModal
                     editing={editing}
+                    drivers={drivers}
                     onClose={() => setModalOpen(false)}
                 />
             )}

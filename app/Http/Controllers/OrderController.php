@@ -8,7 +8,6 @@ use App\Enums\OrderStatus;
 use App\Enums\Permission;
 use App\Enums\TruckStatus;
 use App\Events\OrderStatusChanged;
-use App\Models\Driver;
 use App\Models\Order;
 use App\Models\Truck;
 use App\Services\DeliveryService;
@@ -39,7 +38,7 @@ class OrderController extends Controller
         $search = $request->query('search');
 
         $orders = Order::query()
-            ->with(['user:id,name', 'delivery'])
+            ->with(['user:id,name', 'delivery', 'items'])
             ->when($statuses !== [], fn ($query) => $query->whereIn('status', $statuses))
             ->when(is_string($search) && $search !== '', fn ($query) => $query
                 ->where(function ($q) use ($search) {
@@ -76,18 +75,18 @@ class OrderController extends Controller
             $order->payment_due_at !== null && $order->payment_due_at->isPast(),
         );
 
+        $totalLiters = $order->items->sum(fn ($item) => ($item->volume_liters ?? 0) * $item->quantity);
+
         return Inertia::render('dashboard/orders/Show', [
             'order' => $order,
             'assignOptions' => [
                 'trucks' => Truck::query()
                     ->active()
                     ->where('status', TruckStatus::Available)
+                    ->where('capacity_liters', $totalLiters)
+                    ->with('defaultDriver.user:id,name')
                     ->orderBy('name')
-                    ->get(['id', 'name', 'plate_number', 'capacity_liters']),
-                'drivers' => Driver::query()
-                    ->available()
-                    ->with('user:id,name,phone')
-                    ->get(['id', 'user_id']),
+                    ->get(['id', 'name', 'plate_number', 'capacity_liters', 'default_driver_id']),
             ],
         ]);
     }
@@ -96,18 +95,15 @@ class OrderController extends Controller
     {
         $validated = $request->validate([
             'truck_id' => ['required', 'exists:trucks,id'],
-            'driver_id' => ['required', 'exists:drivers,id'],
             'note' => ['nullable', 'string', 'max:255'],
         ]);
 
         $truck = Truck::query()->whereKey($validated['truck_id'])->firstOrFail();
-        $driver = Driver::query()->whereKey($validated['driver_id'])->firstOrFail();
 
         try {
             $this->deliveryService->assign(
                 $order,
                 $truck,
-                $driver,
                 $validated['note'] ?? null,
             );
         } catch (RuntimeException $e) {

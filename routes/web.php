@@ -15,6 +15,7 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PromoCodeController;
 use App\Http\Controllers\PromotionController;
+use App\Http\Controllers\QueueController;
 use App\Http\Controllers\TruckController;
 use App\Http\Controllers\ZoneController;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
@@ -32,6 +33,8 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
     Route::post('/checkout/promo', [CheckoutController::class, 'validatePromo'])->name('checkout.promo');
     Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
+    Route::post('/zone/lookup', [ZoneController::class, 'lookup'])->name('zone.lookup');
+    Route::get('/area/search', [AreaController::class, 'search'])->name('area.search');
 });
 
 Route::post('/midtrans/webhook', [PaymentController::class, 'webhook'])
@@ -54,14 +57,16 @@ Route::middleware(['auth', 'permission:orders.view|deliveries.view|dashboard.vie
         Route::post('/orders/{order}/pay', [PaymentController::class, 'pay'])->middleware('permission:orders.view')->name('orders.pay');
         Route::get('/orders/{order}/pay-status', [PaymentController::class, 'status'])->middleware('permission:orders.view')->name('orders.pay-status');
 
+        Route::get('/queue', [QueueController::class, 'index'])->middleware('permission:orders.assign')->name('queue.index');
+
         Route::get('/deliveries', [DeliveryController::class, 'index'])->middleware('permission:deliveries.view')->name('deliveries.index');
-        Route::post('/deliveries/{delivery}/accept', [DeliveryController::class, 'accept'])->middleware('permission:deliveries.update-status')->name('deliveries.accept');
-        Route::post('/deliveries/{delivery}/reject', [DeliveryController::class, 'reject'])->middleware('permission:deliveries.update-status')->name('deliveries.reject');
         Route::post('/deliveries/{delivery}/fill', [DeliveryController::class, 'fill'])->middleware('permission:deliveries.update-status')->name('deliveries.fill');
         Route::post('/deliveries/{delivery}/depart', [DeliveryController::class, 'depart'])->middleware('permission:deliveries.update-status')->name('deliveries.depart');
         Route::post('/deliveries/{delivery}/unload', [DeliveryController::class, 'unload'])->middleware('permission:deliveries.update-status')->name('deliveries.unload');
         Route::post('/deliveries/{delivery}/deliver', [DeliveryController::class, 'deliver'])->middleware('permission:deliveries.update-status')->name('deliveries.deliver');
         Route::post('/deliveries/{delivery}/fail', [DeliveryController::class, 'fail'])->middleware('permission:deliveries.update-status')->name('deliveries.fail');
+        Route::post('/deliveries/{delivery}/cancel-scheduled', [DeliveryController::class, 'cancelScheduled'])->middleware('permission:deliveries.update-status')->name('deliveries.cancel-scheduled');
+        Route::post('/deliveries/{delivery}/reassign-driver', [DeliveryController::class, 'reassignDriver'])->middleware('permission:deliveries.update-status')->name('deliveries.reassign-driver');
         Route::post('/deliveries/{delivery}/photos', [DeliveryController::class, 'storePhoto'])->middleware('permission:deliveries.update-status')->name('deliveries.photos.store');
 
         Route::middleware('permission:promotions.manage')->group(function (): void {
@@ -116,7 +121,4 @@ Route::middleware(['auth', 'permission:orders.view|deliveries.view|dashboard.vie
             Route::post('/addresses/{address}', [AddressController::class, 'update'])->name('addresses.update');
             Route::delete('/addresses/{address}', [AddressController::class, 'destroy'])->name('addresses.destroy');
         });
-
-        Route::post('/zone/lookup', [ZoneController::class, 'lookup'])->name('zone.lookup');
-        Route::get('/area/search', [AreaController::class, 'search'])->name('area.search');
     });

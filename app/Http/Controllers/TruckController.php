@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Enums\TruckStatus;
+use App\Models\Driver;
 use App\Models\Truck;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -21,8 +22,13 @@ class TruckController extends Controller
 
         return Inertia::render('dashboard/trucks/Index', [
             'trucks' => Truck::query()
+                ->with('defaultDriver.user:id,name')
                 ->latest()
                 ->paginate(15),
+            'drivers' => Driver::query()
+                ->with('user:id,name')
+                ->orderBy('id')
+                ->get(['id', 'user_id']),
         ]);
     }
 
@@ -83,6 +89,7 @@ class TruckController extends Controller
             'capacity_liters' => ['required', 'integer', 'min:1'],
             'status' => ['sometimes', Rule::enum(TruckStatus::class)],
             'notes' => ['nullable', 'string', 'max:500'],
+            'default_driver_id' => ['nullable', 'exists:drivers,id'],
         ]);
     }
 }

@@ -34,6 +34,7 @@ use Ramsey\Uuid\Uuid;
     'driver_id',
     'status',
     'scheduled_at',
+    'filling_started_at',
     'departed_at',
     'delivered_at',
     'note',

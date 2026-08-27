@@ -2,6 +2,7 @@ import { Link, usePage } from '@inertiajs/react';
 import {
     Clock,
     LayoutDashboard,
+    ListOrdered,
     LogOut,
     MapPin,
     Megaphone,
@@ -25,6 +26,7 @@ import { index as operatingHoursIndex } from '../../routes/dashboard/operating-h
 import { index as ordersIndex } from '../../routes/dashboard/orders';
 import { index as promoCodesIndex } from '../../routes/dashboard/promo-codes';
 import { index as promotionsIndex } from '../../routes/dashboard/promotions';
+import { index as queueIndex } from '../../routes/dashboard/queue';
 import { index as trucksIndex } from '../../routes/dashboard/trucks';
 import { index as zonesIndex } from '../../routes/dashboard/zones';
 import Logo from '../public/Logo';
@@ -79,6 +81,12 @@ const NAV_ITEMS: Record<string, NavItem[]> = {
             label: 'Pesanan',
             permission: 'orders.view',
             icon: <Package size={16} aria-hidden="true" />,
+        },
+        {
+            href: queueIndex.url(),
+            label: 'Antrian',
+            permission: 'orders.assign',
+            icon: <ListOrdered size={16} aria-hidden="true" />,
         },
         {
             href: promotionsIndex.url(),

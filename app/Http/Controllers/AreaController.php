@@ -18,6 +18,9 @@ class AreaController extends Controller
             return response()->json([]);
         }
 
+        $city = $request->string('city')->toString();
+        $kecamatan = $request->string('kecamatan')->toString();
+
         $zones = Zone::query()
             ->active()
             ->where(function ($q) use ($query) {
@@ -25,20 +28,13 @@ class AreaController extends Controller
                     ->orWhere('kelurahan', 'LIKE', "%{$query}%")
                     ->orWhere('city', 'LIKE', "%{$query}%");
             })
+            ->when($city, fn ($q) => $q->where('city', $city))
+            ->when($kecamatan, fn ($q) => $q->where('kecamatan', $kecamatan))
             ->select('kecamatan', 'kelurahan', 'city', 'delivery_fee', 'is_within_area')
             ->distinct()
-            ->limit(10)
+            ->limit(15)
             ->get()
-            ->map(function ($zone) {
-                return [
-                    'kecamatan' => $zone->kecamatan,
-                    'kelurahan' => $zone->kelurahan,
-                    'city' => $zone->city,
-                    'delivery_fee' => $zone->delivery_fee,
-                    'is_within_area' => $zone->is_within_area,
-                ];
-            })
-            ->unique('kecamatan.kelurahan.city')
+            ->unique(fn (Zone $zone): string => $zone->kecamatan.'|'.$zone->kelurahan.'|'.$zone->city)
             ->values();
 
         return response()->json($zones);

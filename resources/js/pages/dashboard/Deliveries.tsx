@@ -9,12 +9,10 @@ import { useConfirm } from '../../components/ui/ConfirmDialog';
 import { useDashboardRealtime } from '../../hooks/useDashboardRealtime';
 import { formatDateTime } from '../../lib/format';
 import {
-    accept,
     depart,
     deliver,
     fail,
     fill,
-    reject,
     unload,
 } from '../../routes/dashboard/deliveries';
 import photos from '../../routes/dashboard/deliveries/photos';
@@ -172,36 +170,6 @@ export default function Deliveries({ active, history }: DeliveryPageProps) {
     function renderActions(delivery: DeliveryItem) {
         if (delivery.status === 'scheduled') {
             return (
-                <>
-                    <button
-                        type="button"
-                        onClick={() =>
-                            act(accept.url({ delivery: delivery.uuid }))
-                        }
-                        disabled={pendingUrl !== null}
-                        className="btn btn-brand flex-1 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                        Terima Tugas
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() =>
-                            confirmAct(
-                                reject.url({ delivery: delivery.uuid }),
-                                'Tolak tugas pengiriman ini? Pesanan akan dikembalikan ke admin.',
-                            )
-                        }
-                        disabled={pendingUrl !== null}
-                        className="border border-danger-strong px-4 py-3 text-sm font-semibold text-danger-strong transition-colors hover:bg-danger-soft disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                        Tolak
-                    </button>
-                </>
-            );
-        }
-
-        if (delivery.status === 'accepted') {
-            return (
                 <button
                     type="button"
                     onClick={() => act(fill.url({ delivery: delivery.uuid }))}
@@ -328,16 +296,21 @@ export default function Deliveries({ active, history }: DeliveryPageProps) {
                     </div>
                 ) : (
                     <div className="grid gap-6 lg:grid-cols-2">
-                        {active.map((delivery) => (
+                        {active.map((delivery, index) => (
                             <div
                                 key={delivery.id}
                                 className="card flex flex-col p-6"
                             >
                                 <div className="flex items-start justify-between gap-3">
                                     <div>
-                                        <p className="font-mono text-sm font-bold tracking-wider text-fg-brand">
-                                            {delivery.order.order_number}
-                                        </p>
+                                        <div className="flex items-center gap-2">
+                                            <span className="inline-flex h-6 w-6 items-center justify-center bg-brand text-xs font-bold text-on-brand">
+                                                {index + 1}
+                                            </span>
+                                            <p className="font-mono text-sm font-bold tracking-wider text-fg-brand">
+                                                {delivery.order.order_number}
+                                            </p>
+                                        </div>
                                         <p className="mt-0.5 text-xs text-body-subtle">
                                             {delivery.truck
                                                 ? `${delivery.truck.name} · ${delivery.truck.plate_number}`

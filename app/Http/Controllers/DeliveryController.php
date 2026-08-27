@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Enums\DeliveryStatus;
+use App\Enums\Permission;
 use App\Enums\PhotoType;
 use App\Models\Delivery;
 use App\Models\Driver;
@@ -30,32 +31,6 @@ class DeliveryController extends Controller
             'dashboard/Deliveries',
             $this->deliveryService->scheduleFor($this->currentDriver()),
         );
-    }
-
-    public function accept(Delivery $delivery): RedirectResponse
-    {
-        $this->authorizeDelivery($delivery);
-
-        try {
-            $this->deliveryService->accept($delivery);
-        } catch (RuntimeException $e) {
-            return back()->with('error', $e->getMessage());
-        }
-
-        return back()->with('success', 'Tugas diterima. Silakan lakukan pengisian air.');
-    }
-
-    public function reject(Delivery $delivery): RedirectResponse
-    {
-        $this->authorizeDelivery($delivery);
-
-        try {
-            $this->deliveryService->reject($delivery);
-        } catch (RuntimeException $e) {
-            return back()->with('error', $e->getMessage());
-        }
-
-        return back()->with('success', 'Tugas ditolak. Pesanan dikembalikan ke admin untuk penugasan ulang.');
     }
 
     public function fill(Delivery $delivery): RedirectResponse
@@ -123,6 +98,39 @@ class DeliveryController extends Controller
         return back()->with('error', 'Pengiriman ditandai gagal. Pesanan dikembalikan ke antrean.');
     }
 
+    public function cancelScheduled(Delivery $delivery): RedirectResponse
+    {
+        $this->authorizeAdmin();
+
+        try {
+            $this->deliveryService->cancelScheduled($delivery);
+        } catch (RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', 'Tugas dibatalkan. Pesanan dikembalikan ke antrean.');
+    }
+
+    public function reassignDriver(Delivery $delivery, Request $request): RedirectResponse
+    {
+        $this->authorizeAdmin();
+
+        $validated = $request->validate([
+            'driver_id' => ['required', 'exists:drivers,id'],
+        ]);
+
+        /** @var Driver $newDriver */
+        $newDriver = Driver::findOrFail($validated['driver_id']);
+
+        try {
+            $this->deliveryService->reassignDriver($delivery, $newDriver);
+        } catch (RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', 'Driver berhasil diganti.');
+    }
+
     public function storePhoto(Request $request, Delivery $delivery): RedirectResponse
     {
         $this->authorizeDelivery($delivery);
@@ -134,7 +142,7 @@ class DeliveryController extends Controller
 
         $type = PhotoType::from($validated['type']);
 
-        $allowed = ($type === PhotoType::Filling && in_array($delivery->status, [DeliveryStatus::Accepted, DeliveryStatus::Filling], true))
+        $allowed = ($type === PhotoType::Filling && $delivery->status->is(DeliveryStatus::Filling))
             || ($type !== PhotoType::Filling && $delivery->status->is(DeliveryStatus::Unloading));
 
         if (! $allowed) {
@@ -169,6 +177,17 @@ class DeliveryController extends Controller
 
     private function authorizeDelivery(Delivery $delivery): void
     {
+        $user = auth()->user();
+
+        if ($user->hasPermissionTo(Permission::DashboardView)) {
+            return;
+        }
+
         abort_unless($delivery->driver_id === $this->currentDriver()->id, 404);
+    }
+
+    private function authorizeAdmin(): void
+    {
+        abort_unless(auth()->user()->hasPermissionTo(Permission::DeliveriesUpdateStatus), 403);
     }
 }

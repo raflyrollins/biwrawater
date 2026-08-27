@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Driver;
 use App\Models\Truck;
 use Illuminate\Database\Seeder;
 
@@ -12,6 +13,12 @@ class TruckSeeder extends Seeder
      */
     public function run(): void
     {
+        $driverMap = [
+            'BK 1234 AB' => 'driver@biwrawater.test',
+            'BK 5678 CD' => 'andi@biwrawater.test',
+            'BK 9012 EF' => 'rina@biwrawater.test',
+        ];
+
         $trucks = [
             [
                 'plate_number' => 'BK 1234 AB',
@@ -34,9 +41,12 @@ class TruckSeeder extends Seeder
         ];
 
         foreach ($trucks as $truck) {
+            $driverEmail = $driverMap[$truck['plate_number']];
+            $driverId = Driver::whereHas('user', fn ($q) => $q->where('email', $driverEmail))->value('id');
+
             Truck::updateOrCreate(
                 ['plate_number' => $truck['plate_number']],
-                $truck,
+                array_merge($truck, ['default_driver_id' => $driverId]),
             );
         }
     }

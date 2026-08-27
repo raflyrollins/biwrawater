@@ -129,7 +129,7 @@ class CheckoutController extends Controller
                 $address,
                 $validated['promo_code'] ?? null,
                 $validated['customer_note'] ?? null,
-                $validated['zone_id'] ?? null,
+                isset($validated['zone_id']) ? (int) $validated['zone_id'] : null,
             );
         } catch (RuntimeException $e) {
             return back()

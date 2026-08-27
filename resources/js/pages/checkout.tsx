@@ -457,6 +457,34 @@ export default function Checkout({
                                         <FieldError message={errors.phone} />
                                     </div>
                                     <div className="sm:col-span-2">
+                                        <label
+                                            htmlFor="address-street"
+                                            className="mb-2 block text-sm font-semibold text-heading"
+                                        >
+                                            Alamat Jalan
+                                        </label>
+                                        <input
+                                            id="address-street"
+                                            type="text"
+                                            value={data.street_address}
+                                            onChange={(e) =>
+                                                setData(
+                                                    'street_address',
+                                                    e.target.value,
+                                                )
+                                            }
+                                            className={cn(
+                                                'input',
+                                                errors.street_address &&
+                                                    'input-error',
+                                            )}
+                                            placeholder="Jalan, nomor, RT/RW"
+                                        />
+                                        <FieldError
+                                            message={errors.street_address}
+                                        />
+                                    </div>
+                                    <div className="sm:col-span-2">
                                         <Autocomplete
                                             label="Kota"
                                             name="city"
@@ -465,6 +493,7 @@ export default function Checkout({
                                                 setData('city', value)
                                             }
                                             onSelect={handleAreaSelect}
+                                            displayField="city"
                                             required
                                             placeholder="Ketik nama kota..."
                                             error={errors.city}
@@ -479,8 +508,18 @@ export default function Checkout({
                                                 setData('district', value)
                                             }
                                             onSelect={handleAreaSelect}
+                                            displayField="kecamatan"
+                                            filterParams={
+                                                data.city
+                                                    ? { city: data.city }
+                                                    : undefined
+                                            }
                                             required
-                                            placeholder="Ketik nama kecamatan..."
+                                            placeholder={
+                                                data.city
+                                                    ? `Kecamatan di ${data.city}...`
+                                                    : 'Pilih kota terlebih dahulu...'
+                                            }
                                             error={errors.district}
                                         />
                                     </div>
@@ -493,32 +532,28 @@ export default function Checkout({
                                                 setData('subdistrict', value)
                                             }
                                             onSelect={handleAreaSelect}
+                                            displayField="kelurahan"
+                                            filterParams={
+                                                data.city && data.district
+                                                    ? {
+                                                          city: data.city,
+                                                          kecamatan:
+                                                              data.district,
+                                                      }
+                                                    : data.city
+                                                      ? { city: data.city }
+                                                      : undefined
+                                            }
                                             required
-                                            placeholder="Ketik nama kelurahan..."
+                                            placeholder={
+                                                data.district
+                                                    ? `Kelurahan di ${data.district}...`
+                                                    : data.city
+                                                      ? 'Pilih kecamatan terlebih dahulu...'
+                                                      : 'Pilih kota terlebih dahulu...'
+                                            }
                                             error={errors.subdistrict}
                                         />
-                                    </div>
-                                    <div className="sm:col-span-2">
-                                        <label
-                                            htmlFor="address-city"
-                                            className="mb-2 block text-sm font-semibold text-heading"
-                                        >
-                                            Kota
-                                        </label>
-                                        <input
-                                            id="address-city"
-                                            type="text"
-                                            value={data.city}
-                                            onChange={(e) =>
-                                                setData('city', e.target.value)
-                                            }
-                                            className={cn(
-                                                'input',
-                                                errors.city && 'input-error',
-                                            )}
-                                            readOnly={!!matchedZone}
-                                        />
-                                        <FieldError message={errors.city} />
                                     </div>
                                     {activeZone && (
                                         <div className="flex items-center gap-2 rounded-sm bg-brand-soft px-4 py-3 text-sm sm:col-span-2">

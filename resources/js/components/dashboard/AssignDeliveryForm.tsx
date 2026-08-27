@@ -2,10 +2,8 @@ import { useForm } from '@inertiajs/react';
 
 import type { FormEvent } from 'react';
 
-import { combineDateTime, splitDateTime, todayIso } from '../../lib/date';
 import { assign } from '../../routes/dashboard/orders';
 import FieldError from '../public/FieldError';
-import DatePicker from '../ui/DatePicker';
 import Select from '../ui/Select';
 
 export interface AssignTruck {
@@ -13,39 +11,33 @@ export interface AssignTruck {
     name: string;
     plate_number: string;
     capacity_liters: number;
-}
-
-export interface AssignDriver {
-    id: number;
-    user: {
-        name: string;
-        phone: string | null;
-    };
+    default_driver_id: number | null;
+    defaultDriver?: {
+        user: { name: string };
+    } | null;
 }
 
 interface AssignDeliveryFormProps {
     orderUuid: string;
+    totalLiters: number;
     trucks: AssignTruck[];
-    drivers: AssignDriver[];
 }
 
 export default function AssignDeliveryForm({
     orderUuid,
+    totalLiters,
     trucks,
-    drivers,
 }: AssignDeliveryFormProps) {
     const { data, setData, errors, processing, post } = useForm({
         truck_id: '',
-        driver_id: '',
-        scheduled_at: '',
         note: '',
     });
 
-    const { date, time } = splitDateTime(data.scheduled_at);
-
-    function setScheduled(nextDate: string, nextTime: string) {
-        setData('scheduled_at', combineDateTime(nextDate, nextTime));
-    }
+    const selectedTruck = trucks.find(
+        (t) => String(t.id) === data.truck_id,
+    );
+    const driverName =
+        selectedTruck?.defaultDriver?.user.name ?? '-';
 
     function submit(e: FormEvent) {
         e.preventDefault();
@@ -55,8 +47,11 @@ export default function AssignDeliveryForm({
     return (
         <form onSubmit={submit} className="card p-6">
             <p className="label-caps text-body-subtle">Tugaskan Pengiriman</p>
+            <p className="mt-2 text-sm text-body-subtle">
+                Volume: <span className="font-semibold text-heading">{totalLiters.toLocaleString('id-ID')} liter</span>
+            </p>
 
-            <div className="mt-5 grid gap-5 sm:grid-cols-2">
+            <div className="mt-5 space-y-5">
                 <div>
                     <Select
                         label="Armada"
@@ -72,48 +67,14 @@ export default function AssignDeliveryForm({
                     />
                 </div>
 
-                <div>
-                    <Select
-                        label="Driver"
-                        value={data.driver_id}
-                        onChange={(value) =>
-                            setData('driver_id', String(value))
-                        }
-                        options={drivers.map((driver) => ({
-                            value: String(driver.id),
-                            label: driver.user.name,
-                        }))}
-                        placeholder="Pilih driver"
-                        error={errors.driver_id}
-                        searchPlaceholder="Cari driver..."
-                    />
-                </div>
-
-                <div>
-                    <DatePicker
-                        label="Tanggal Pengiriman"
-                        value={date}
-                        onChange={(nextDate) => setScheduled(nextDate, time)}
-                        error={errors.scheduled_at}
-                        min={todayIso()}
-                    />
-
-                    <div className="mt-3">
-                        <label
-                            htmlFor="assign-time"
-                            className="mb-2 block text-sm font-semibold text-heading"
-                        >
-                            Waktu
-                        </label>
-                        <input
-                            id="assign-time"
-                            type="time"
-                            value={time}
-                            onChange={(e) => setScheduled(date, e.target.value)}
-                            className="input"
-                        />
+                {selectedTruck && (
+                    <div className="rounded-sm bg-neutral-tertiary-soft px-4 py-3 text-sm">
+                        <span className="text-body-subtle">Driver: </span>
+                        <span className="font-semibold text-heading">
+                            {driverName}
+                        </span>
                     </div>
-                </div>
+                )}
 
                 <div>
                     <label
@@ -136,8 +97,8 @@ export default function AssignDeliveryForm({
 
             <button
                 type="submit"
-                disabled={processing}
-                className="btn btn-brand mt-6"
+                disabled={processing || !data.truck_id}
+                className="btn btn-brand mt-6 disabled:cursor-not-allowed disabled:opacity-50"
             >
                 {processing ? 'Menyimpan...' : 'Tugaskan & Konfirmasi'}
             </button>

@@ -87,7 +87,7 @@ class DashboardController extends Controller
                 ->limit(6)
                 ->get(),
             'todaySchedule' => Delivery::query()
-                ->with(['order:id,order_number,status', 'truck:id,name,plate_number', 'driver:id,user_id', 'driver.user:id,name'])
+                ->with(['order:id,uuid,order_number,status', 'truck:id,name,plate_number', 'driver:id,user_id', 'driver.user:id,name'])
                 ->whereDate('scheduled_at', today())
                 ->orderBy('scheduled_at')
                 ->get(),
