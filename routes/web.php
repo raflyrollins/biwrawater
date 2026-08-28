@@ -69,6 +69,8 @@ Route::middleware(['auth', 'permission:orders.view|deliveries.view|dashboard.vie
         Route::post('/deliveries/{delivery}/reassign-driver', [DeliveryController::class, 'reassignDriver'])->middleware('permission:deliveries.update-status')->name('deliveries.reassign-driver');
         Route::post('/deliveries/{delivery}/photos', [DeliveryController::class, 'storePhoto'])->middleware('permission:deliveries.update-status')->name('deliveries.photos.store');
 
+        Route::post('/driver/status', [DriverController::class, 'updateMyStatus'])->middleware('permission:deliveries.view')->name('driver.status.update');
+
         Route::middleware('permission:promotions.manage')->group(function (): void {
             Route::get('/promotions', [PromotionController::class, 'index'])->name('promotions.index');
             Route::post('/promotions', [PromotionController::class, 'store'])->name('promotions.store');
@@ -97,7 +99,7 @@ Route::middleware(['auth', 'permission:orders.view|deliveries.view|dashboard.vie
             Route::get('/drivers', [DriverController::class, 'index'])->name('drivers.index');
             Route::post('/drivers', [DriverController::class, 'store'])->name('drivers.store');
             Route::post('/drivers/{driver}', [DriverController::class, 'update'])->name('drivers.update');
-            Route::post('/drivers/{driver}/toggle', [DriverController::class, 'toggle'])->name('drivers.toggle');
+            Route::post('/drivers/{driver}/status', [DriverController::class, 'setStatus'])->name('drivers.set-status');
             Route::delete('/drivers/{driver}', [DriverController::class, 'destroy'])->name('drivers.destroy');
         });
 

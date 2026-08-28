@@ -79,19 +79,49 @@ class DriverController extends Controller
         return back()->with('success', 'Driver diperbarui.');
     }
 
-    public function toggle(Driver $driver): RedirectResponse
+    public function setStatus(Request $request, Driver $driver): RedirectResponse
     {
-        if ($driver->status->is(DriverStatus::OnDuty)) {
-            return back()->with('error', 'Driver sedang bertugas, status tidak dapat diubah.');
+        $newStatus = $this->resolveDrivableStatus($request);
+
+        $error = $this->statusChangeError($driver, $newStatus);
+
+        if ($error !== null) {
+            return back()->with('error', $error);
         }
 
         $driver->update([
-            'status' => $driver->status->is(DriverStatus::Available)
-                ? DriverStatus::OffDuty
-                : DriverStatus::Available,
+            'status' => $newStatus,
         ]);
 
         return back()->with('success', 'Status driver diperbarui.');
+    }
+
+    /**
+     * Driver mengelola statusnya sendiri (tersedia / istirahat),
+     * kecuali sedang bertugas atau masih punya tugas aktif.
+     */
+    public function updateMyStatus(Request $request): RedirectResponse
+    {
+        $user = auth()->user();
+        $driver = $user->driver;
+
+        if ($driver === null) {
+            abort(403);
+        }
+
+        $newStatus = $this->resolveDrivableStatus($request);
+
+        $error = $this->statusChangeError($driver, $newStatus);
+
+        if ($error !== null) {
+            return back()->with('error', $error);
+        }
+
+        $driver->update([
+            'status' => $newStatus,
+        ]);
+
+        return back()->with('success', 'Status Anda diperbarui.');
     }
 
     public function destroy(Driver $driver): RedirectResponse
@@ -105,6 +135,28 @@ class DriverController extends Controller
         ]);
 
         return back()->with('success', 'Driver dinonaktifkan.');
+    }
+
+    private function resolveDrivableStatus(Request $request): DriverStatus
+    {
+        $validated = $request->validate([
+            'status' => ['required', Rule::in([DriverStatus::Available->value, DriverStatus::OffDuty->value])],
+        ]);
+
+        return DriverStatus::from($validated['status']);
+    }
+
+    private function statusChangeError(Driver $driver, DriverStatus $newStatus): ?string
+    {
+        if ($driver->status->is(DriverStatus::OnDuty)) {
+            return 'Driver sedang bertugas, status tidak dapat diubah.';
+        }
+
+        if ($newStatus->is(DriverStatus::OffDuty) && $driver->deliveries()->active()->exists()) {
+            return 'Driver masih memiliki tugas aktif, selesaikan atau alihkan tugasnya terlebih dahulu.';
+        }
+
+        return null;
     }
 
     /**

@@ -38,6 +38,7 @@ class DeliveryController extends Controller
         $this->authorizeDelivery($delivery);
 
         try {
+            $this->ensureFifo($delivery);
             $this->deliveryService->startFilling($delivery);
         } catch (RuntimeException $e) {
             return back()->with('error', $e->getMessage());
@@ -51,6 +52,7 @@ class DeliveryController extends Controller
         $this->authorizeDelivery($delivery);
 
         try {
+            $this->ensureFifo($delivery);
             $this->deliveryService->depart($delivery);
         } catch (RuntimeException $e) {
             return back()->with('error', $e->getMessage());
@@ -64,6 +66,7 @@ class DeliveryController extends Controller
         $this->authorizeDelivery($delivery);
 
         try {
+            $this->ensureFifo($delivery);
             $this->deliveryService->startUnloading($delivery);
         } catch (RuntimeException $e) {
             return back()->with('error', $e->getMessage());
@@ -77,6 +80,7 @@ class DeliveryController extends Controller
         $this->authorizeDelivery($delivery);
 
         try {
+            $this->ensureFifo($delivery);
             $this->deliveryService->deliver($delivery);
         } catch (RuntimeException $e) {
             return back()->with('error', $e->getMessage());
@@ -90,6 +94,7 @@ class DeliveryController extends Controller
         $this->authorizeDelivery($delivery);
 
         try {
+            $this->ensureFifo($delivery);
             $this->deliveryService->fail($delivery);
         } catch (RuntimeException $e) {
             return back()->with('error', $e->getMessage());
@@ -134,6 +139,12 @@ class DeliveryController extends Controller
     public function storePhoto(Request $request, Delivery $delivery): RedirectResponse
     {
         $this->authorizeDelivery($delivery);
+
+        try {
+            $this->ensureFifo($delivery);
+        } catch (RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
 
         $validated = $request->validate([
             'type' => ['required', Rule::enum(PhotoType::class)],
@@ -189,5 +200,28 @@ class DeliveryController extends Controller
     private function authorizeAdmin(): void
     {
         abort_unless(auth()->user()->hasPermissionTo(Permission::DeliveriesUpdateStatus), 403);
+    }
+
+    /**
+     * Aturan FIFO untuk driver: hanya tugas aktif yang paling awal
+     * (terjadwal pertama) yang boleh dikerjakan.
+     * Admin tidak terikat aturan ini.
+     */
+    private function ensureFifo(Delivery $delivery): void
+    {
+        if (auth()->user()->hasPermissionTo(Permission::DashboardView)) {
+            return;
+        }
+
+        $current = Delivery::query()
+            ->where('driver_id', $this->currentDriver()->id)
+            ->active()
+            ->orderBy('scheduled_at')
+            ->orderBy('id')
+            ->first();
+
+        if ($current === null || $current->id !== $delivery->id) {
+            throw new RuntimeException('Selesaikan tugas paling awal terlebih dahulu (FIFO).');
+        }
     }
 }

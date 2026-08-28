@@ -11,12 +11,10 @@ import type { PaginationLink } from '../../../components/dashboard/Pagination';
 import StatusBadge from '../../../components/dashboard/StatusBadge';
 import FieldError from '../../../components/public/FieldError';
 import { useConfirm } from '../../../components/ui/ConfirmDialog';
-import { STATUS_LABELS } from '../../../lib/labels';
 import { cn } from '../../../lib/utils';
 import {
     destroy as destroyDriver,
     store as storeDriver,
-    toggle as toggleDriver,
     update as updateDriver,
 } from '../../../routes/dashboard/drivers';
 
@@ -311,8 +309,11 @@ export default function DriversIndex({ drivers }: DriversIndexProps) {
         setModalOpen(true);
     }
 
-    function toggle(driver: DriverItem) {
-        router.post(toggleDriver.url({ driver: driver.uuid }));
+    function setDriverStatus(
+        driver: DriverItem,
+        status: 'available' | 'off_duty',
+    ) {
+        router.post(`/dashboard/drivers/${driver.uuid}/status`, { status });
     }
 
     const confirm = useConfirm();
@@ -380,19 +381,37 @@ export default function DriversIndex({ drivers }: DriversIndexProps) {
                                         {driver.user.email}
                                     </p>
                                 </div>
-                                <button
-                                    type="button"
-                                    onClick={() => toggle(driver)}
-                                    className={cn(
-                                        'shrink-0 text-sm font-semibold no-underline',
-                                        driver.status === 'available'
-                                            ? 'text-success-strong'
-                                            : 'text-body-subtle',
+                                <div className="flex shrink-0 flex-col items-end gap-2">
+                                    <StatusBadge status={driver.status} />
+                                    {driver.status === 'available' && (
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                setDriverStatus(
+                                                    driver,
+                                                    'off_duty',
+                                                )
+                                            }
+                                            className="text-xs font-semibold text-body-subtle transition-colors hover:text-heading"
+                                        >
+                                            Istirahatkan
+                                        </button>
                                     )}
-                                    title="Ubah status"
-                                >
-                                    {STATUS_LABELS[driver.status]}
-                                </button>
+                                    {driver.status === 'off_duty' && (
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                setDriverStatus(
+                                                    driver,
+                                                    'available',
+                                                )
+                                            }
+                                            className="text-xs font-semibold text-fg-brand no-underline transition-colors hover:text-fg-brand-strong"
+                                        >
+                                            Aktifkan Kembali
+                                        </button>
+                                    )}
+                                </div>
                             </div>
 
                             {driver.notes && (
@@ -407,9 +426,6 @@ export default function DriversIndex({ drivers }: DriversIndexProps) {
                                 </RowValue>
                                 <RowValue label="No. SIM">
                                     {driver.license_number ?? '-'}
-                                </RowValue>
-                                <RowValue label="Status">
-                                    <StatusBadge status={driver.status} />
                                 </RowValue>
                             </div>
 

@@ -1,9 +1,15 @@
 <?php
 
+use App\Enums\DeliveryStatus;
 use App\Enums\DriverStatus;
+use App\Enums\OrderStatus;
+use App\Enums\PaymentStatus;
 use App\Enums\Role;
 use App\Enums\UserRole;
+use App\Models\Delivery;
 use App\Models\Driver;
+use App\Models\Order;
+use App\Models\Truck;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -60,16 +66,26 @@ test('admin dapat mengubah driver tanpa mengganti password', function () {
         ->and($driver->refresh()->license_number)->toBe('9999-0000');
 });
 
-test('status driver dapat dialihkan antara tersedia dan istirahat', function () {
+test('admin dapat mengatur status driver antara tersedia dan istirahat', function () {
     $admin = User::factory()->admin()->create();
     $driver = Driver::factory()->create();
 
     $this->actingAs($admin)
-        ->post("/dashboard/drivers/{$driver->uuid}/toggle")
+        ->post("/dashboard/drivers/{$driver->uuid}/status", [
+            'status' => DriverStatus::OffDuty->value,
+        ])
         ->assertRedirect()
         ->assertSessionHas('success');
 
     expect($driver->refresh()->status)->toBe(DriverStatus::OffDuty);
+
+    $this->post("/dashboard/drivers/{$driver->uuid}/status", [
+        'status' => DriverStatus::Available->value,
+    ])
+        ->assertRedirect()
+        ->assertSessionHas('success');
+
+    expect($driver->refresh()->status)->toBe(DriverStatus::Available);
 });
 
 test('status driver yang sedang bertugas tidak dapat diubah', function () {
@@ -77,11 +93,108 @@ test('status driver yang sedang bertugas tidak dapat diubah', function () {
     $driver = Driver::factory()->create(['status' => DriverStatus::OnDuty]);
 
     $this->actingAs($admin)
-        ->post("/dashboard/drivers/{$driver->uuid}/toggle")
+        ->post("/dashboard/drivers/{$driver->uuid}/status", [
+            'status' => DriverStatus::Available->value,
+        ])
         ->assertRedirect()
         ->assertSessionHas('error');
 
     expect($driver->refresh()->status)->toBe(DriverStatus::OnDuty);
+});
+
+test('admin tidak dapat mengistirahatkan driver yang masih punya tugas aktif', function () {
+    $admin = User::factory()->admin()->create();
+    $driverUser = User::factory()->driver()->create();
+    $driver = Driver::factory()->for($driverUser)->create();
+    $order = Order::factory()->create([
+        'status' => OrderStatus::Confirmed,
+        'payment_status' => PaymentStatus::Paid,
+    ]);
+    $truck = Truck::factory()->create();
+
+    Delivery::factory()->for($order)->for($truck)->for($driver)->create([
+        'status' => DeliveryStatus::Scheduled,
+        'scheduled_at' => now(),
+    ]);
+
+    $this->actingAs($admin)
+        ->post("/dashboard/drivers/{$driver->uuid}/status", [
+            'status' => DriverStatus::OffDuty->value,
+        ])
+        ->assertRedirect()
+        ->assertSessionHas('error');
+
+    expect($driver->refresh()->status)->toBe(DriverStatus::Available);
+});
+
+test('driver dapat mengatur statusnya sendiri antara tersedia dan istirahat', function () {
+    $user = User::factory()->driver()->create();
+    $driver = Driver::factory()->for($user)->create();
+
+    $this->actingAs($user)
+        ->post('/dashboard/driver/status', [
+            'status' => DriverStatus::OffDuty->value,
+        ])
+        ->assertRedirect()
+        ->assertSessionHas('success');
+
+    expect($driver->refresh()->status)->toBe(DriverStatus::OffDuty);
+
+    $this->post('/dashboard/driver/status', [
+        'status' => DriverStatus::Available->value,
+    ])
+        ->assertRedirect()
+        ->assertSessionHas('success');
+
+    expect($driver->refresh()->status)->toBe(DriverStatus::Available);
+});
+
+test('driver yang sedang bertugas tidak dapat mengubah statusnya sendiri', function () {
+    $user = User::factory()->driver()->create();
+    $driver = Driver::factory()->for($user)->create([
+        'status' => DriverStatus::OnDuty,
+    ]);
+
+    $this->actingAs($user)
+        ->post('/dashboard/driver/status', [
+            'status' => DriverStatus::OffDuty->value,
+        ])
+        ->assertRedirect()
+        ->assertSessionHas('error');
+
+    expect($driver->refresh()->status)->toBe(DriverStatus::OnDuty);
+});
+
+test('driver dengan tugas aktif tidak dapat memilih istirahat', function () {
+    $user = User::factory()->driver()->create();
+    $driver = Driver::factory()->for($user)->create();
+    $order = Order::factory()->create([
+        'status' => OrderStatus::Confirmed,
+        'payment_status' => PaymentStatus::Paid,
+    ]);
+    $truck = Truck::factory()->create();
+
+    Delivery::factory()->for($order)->for($truck)->for($driver)->create([
+        'status' => DeliveryStatus::Scheduled,
+        'scheduled_at' => now(),
+    ]);
+
+    $this->actingAs($user)
+        ->post('/dashboard/driver/status', [
+            'status' => DriverStatus::OffDuty->value,
+        ])
+        ->assertRedirect()
+        ->assertSessionHas('error');
+
+    expect($driver->refresh()->status)->toBe(DriverStatus::Available);
+});
+
+test('pelanggan tidak dapat mengubah statusnya sendiri', function () {
+    $this->actingAs(User::factory()->create())
+        ->post('/dashboard/driver/status', [
+            'status' => DriverStatus::OffDuty->value,
+        ])
+        ->assertForbidden();
 });
 
 test('driver yang sedang bertugas tidak dapat dinonaktifkan', function () {

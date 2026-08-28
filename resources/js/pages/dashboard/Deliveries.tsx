@@ -1,5 +1,12 @@
 import { Head, router } from '@inertiajs/react';
-import { Camera, MapPin, PackageCheck } from 'lucide-react';
+import {
+    ArrowRightToLine,
+    Camera,
+    Clock,
+    Lock,
+    MapPin,
+    PackageCheck,
+} from 'lucide-react';
 
 import { useState } from 'react';
 
@@ -8,6 +15,7 @@ import StatusBadge from '../../components/dashboard/StatusBadge';
 import { useConfirm } from '../../components/ui/ConfirmDialog';
 import { useDashboardRealtime } from '../../hooks/useDashboardRealtime';
 import { formatDateTime } from '../../lib/format';
+import { cn } from '../../lib/utils';
 import {
     depart,
     deliver,
@@ -47,6 +55,8 @@ interface DeliveryItem {
     departed_at: string | null;
     delivered_at: string | null;
     note: string | null;
+    queue_position: number;
+    is_current: boolean;
     order: DeliveryOrder;
     truck: { name: string; plate_number: string } | null;
     photos?: DeliveryPhotoItem[];
@@ -55,6 +65,7 @@ interface DeliveryItem {
 interface DeliveryPageProps {
     active: DeliveryItem[];
     history: DeliveryItem[];
+    driver_status: string;
 }
 
 const PHOTO_LABELS: Record<string, string> = {
@@ -134,13 +145,21 @@ function PhotoUpload({ deliveryUuid, type, existing }: PhotoUploadProps) {
     );
 }
 
-export default function Deliveries({ active, history }: DeliveryPageProps) {
+export default function Deliveries({
+    active,
+    history,
+    driver_status,
+}: DeliveryPageProps) {
     useDashboardRealtime({
         events: ['.delivery.status-changed', '.order.status-changed'],
     });
 
     const confirm = useConfirm();
     const [pendingUrl, setPendingUrl] = useState<string | null>(null);
+
+    function setMyStatus(status: 'available' | 'off_duty') {
+        router.post('/dashboard/driver/status', { status });
+    }
 
     function act(url: string) {
         if (pendingUrl !== null) {
@@ -274,11 +293,41 @@ export default function Deliveries({ active, history }: DeliveryPageProps) {
             <Head title="Jadwal Pengiriman" />
 
             <div className="container-dashboard py-8 md:py-12">
-                <h2 className="mb-1 text-2xl text-heading">Pengiriman Aktif</h2>
-                <p className="mb-8 text-sm text-body-subtle">
-                    Terima tugas, isi air, berangkat, turunkan, lalu unggah foto
-                    bukti sebelum menyelesaikan pengiriman.
-                </p>
+                <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+                    <div>
+                        <h2 className="mb-1 text-2xl text-heading">
+                            Pengiriman Aktif
+                        </h2>
+                        <p className="text-sm text-body-subtle">
+                            Silahkan kerjakan tugas sesuai antrian yang tersedia
+                        </p>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                        <StatusBadge status={driver_status} />
+                        {driver_status === 'on_duty' ? (
+                            <span className="text-sm text-body-subtle">
+                                Sedang bertugas, status tidak bisa diubah.
+                            </span>
+                        ) : driver_status === 'available' ? (
+                            <button
+                                type="button"
+                                onClick={() => setMyStatus('off_duty')}
+                                className="border border-border-default px-4 py-2.5 text-sm font-semibold text-body transition-colors hover:bg-neutral-tertiary-soft"
+                            >
+                                Istirahat
+                            </button>
+                        ) : (
+                            <button
+                                type="button"
+                                onClick={() => setMyStatus('available')}
+                                className="btn btn-brand"
+                            >
+                                Kembali Tersedia
+                            </button>
+                        )}
+                    </div>
+                </div>
 
                 {active.length === 0 ? (
                     <div className="card flex flex-col items-center px-6 py-16 text-center">
@@ -296,20 +345,40 @@ export default function Deliveries({ active, history }: DeliveryPageProps) {
                     </div>
                 ) : (
                     <div className="grid gap-6 lg:grid-cols-2">
-                        {active.map((delivery, index) => (
+                        {active.map((delivery) => (
                             <div
                                 key={delivery.id}
-                                className="card flex flex-col p-6"
+                                className={cn(
+                                    'card flex flex-col p-6',
+                                    !delivery.is_current && 'opacity-75',
+                                )}
                             >
                                 <div className="flex items-start justify-between gap-3">
                                     <div>
                                         <div className="flex items-center gap-2">
                                             <span className="inline-flex h-6 w-6 items-center justify-center bg-brand text-xs font-bold text-on-brand">
-                                                {index + 1}
+                                                {delivery.queue_position}
                                             </span>
                                             <p className="font-mono text-sm font-bold tracking-wider text-fg-brand">
                                                 {delivery.order.order_number}
                                             </p>
+                                            {delivery.is_current ? (
+                                                <span className="inline-flex items-center gap-1 rounded-sm bg-brand-soft px-2 py-1 text-[10px] font-bold text-fg-brand-strong">
+                                                    <ArrowRightToLine
+                                                        size={11}
+                                                        aria-hidden="true"
+                                                    />
+                                                    SEDANG DIKERJAKAN
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center gap-1 rounded-sm bg-neutral-tertiary-soft px-2 py-1 text-[10px] font-bold text-body-subtle">
+                                                    <Clock
+                                                        size={11}
+                                                        aria-hidden="true"
+                                                    />
+                                                    MENUNGGU GILIRAN
+                                                </span>
+                                            )}
                                         </div>
                                         <p className="mt-0.5 text-xs text-body-subtle">
                                             {delivery.truck
@@ -424,9 +493,22 @@ export default function Deliveries({ active, history }: DeliveryPageProps) {
                                 )}
 
                                 <div className="mt-auto pt-5">
-                                    <div className="flex flex-wrap gap-3">
-                                        {renderActions(delivery)}
-                                    </div>
+                                    {delivery.is_current ? (
+                                        <div className="flex flex-wrap gap-3">
+                                            {renderActions(delivery)}
+                                        </div>
+                                    ) : (
+                                        <p className="flex items-center gap-2 rounded-sm bg-neutral-tertiary-soft px-4 py-3 text-xs font-semibold text-body-subtle">
+                                            <Lock
+                                                size={14}
+                                                aria-hidden="true"
+                                                className="shrink-0"
+                                            />
+                                            Tugas ini belum bisa dikerjakan.
+                                            Selesaikan tugas paling awal dulu
+                                            (FIFO).
+                                        </p>
+                                    )}
                                 </div>
                             </div>
                         ))}

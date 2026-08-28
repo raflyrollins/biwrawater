@@ -15,6 +15,7 @@ use App\Models\Zone;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Inertia\Testing\AssertableInertia as Assert;
 
 uses(RefreshDatabase::class);
 
@@ -408,4 +409,125 @@ test('admin mengganti driver pada delivery scheduled', function () {
         ->assertSessionHas('success');
 
     expect($delivery->refresh()->driver_id)->toBe($driver2->id);
+});
+
+test('jadwal driver diurutkan FIFO dengan penanda tugas berjalan', function () {
+    $driverUser = User::factory()->driver()->create();
+    $driver = Driver::factory()->for($driverUser)->create();
+    $truck = Truck::factory()->create();
+
+    $firstOrder = Order::factory()->create([
+        'status' => OrderStatus::Confirmed,
+        'payment_status' => PaymentStatus::Paid,
+    ]);
+    $secondOrder = Order::factory()->create([
+        'status' => OrderStatus::Confirmed,
+        'payment_status' => PaymentStatus::Paid,
+    ]);
+
+    Delivery::factory()->for($firstOrder)->for($truck)->for($driver)->create([
+        'status' => DeliveryStatus::Scheduled,
+        'scheduled_at' => now()->subHour(),
+    ]);
+    Delivery::factory()->for($secondOrder)->for($truck)->for($driver)->create([
+        'status' => DeliveryStatus::Scheduled,
+        'scheduled_at' => now(),
+    ]);
+
+    $this->actingAs($driverUser)
+        ->get('/dashboard/deliveries')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('dashboard/Deliveries')
+            ->has('active', 2)
+            ->where('active.0.queue_position', 1)
+            ->where('active.0.is_current', true)
+            ->where('active.0.order.order_number', $firstOrder->order_number)
+            ->where('active.1.queue_position', 2)
+            ->where('active.1.is_current', false)
+            ->where('active.1.order.order_number', $secondOrder->order_number));
+});
+
+test('driver hanya dapat mengerjakan tugas paling awal (FIFO)', function () {
+    $driverUser = User::factory()->driver()->create();
+    $driver = Driver::factory()->for($driverUser)->create();
+    $truck = Truck::factory()->create();
+
+    $firstOrder = Order::factory()->create([
+        'status' => OrderStatus::Confirmed,
+        'payment_status' => PaymentStatus::Paid,
+    ]);
+    $secondOrder = Order::factory()->create([
+        'status' => OrderStatus::Confirmed,
+        'payment_status' => PaymentStatus::Paid,
+    ]);
+
+    $first = Delivery::factory()->for($firstOrder)->for($truck)->for($driver)->create([
+        'status' => DeliveryStatus::Scheduled,
+        'scheduled_at' => now()->subHour(),
+    ]);
+    $second = Delivery::factory()->for($secondOrder)->for($truck)->for($driver)->create([
+        'status' => DeliveryStatus::Scheduled,
+        'scheduled_at' => now(),
+    ]);
+
+    $this->actingAs($driverUser)
+        ->post("/dashboard/deliveries/{$second->uuid}/fill")
+        ->assertRedirect()
+        ->assertSessionHas('error');
+
+    expect($second->refresh()->status)->toBe(DeliveryStatus::Scheduled);
+
+    $this->post("/dashboard/deliveries/{$first->uuid}/fill")
+        ->assertRedirect()
+        ->assertSessionHas('success');
+
+    expect($first->refresh()->status)->toBe(DeliveryStatus::Filling);
+});
+
+test('tugas berikutnya boleh dikerjakan setelah tugas pertama selesai', function () {
+    Storage::fake('public');
+
+    $driverUser = User::factory()->driver()->create();
+    $driver = Driver::factory()->for($driverUser)->create();
+    $truck = Truck::factory()->create();
+
+    $firstOrder = Order::factory()->create([
+        'status' => OrderStatus::Confirmed,
+        'payment_status' => PaymentStatus::Paid,
+    ]);
+    $secondOrder = Order::factory()->create([
+        'status' => OrderStatus::Confirmed,
+        'payment_status' => PaymentStatus::Paid,
+    ]);
+
+    $first = Delivery::factory()->for($firstOrder)->for($truck)->for($driver)->create([
+        'status' => DeliveryStatus::Unloading,
+        'scheduled_at' => now()->subHour(),
+    ]);
+    $second = Delivery::factory()->for($secondOrder)->for($truck)->for($driver)->create([
+        'status' => DeliveryStatus::Scheduled,
+        'scheduled_at' => now(),
+    ]);
+
+    $first->photos()->create(['type' => 'completion_tank', 'path' => 'tank.jpg']);
+    $first->photos()->create(['type' => 'completion_person', 'path' => 'person.jpg']);
+
+    $this->actingAs($driverUser)
+        ->post("/dashboard/deliveries/{$second->uuid}/fill")
+        ->assertRedirect()
+        ->assertSessionHas('error');
+
+    $this->post("/dashboard/deliveries/{$first->uuid}/deliver")
+        ->assertRedirect()
+        ->assertSessionHas('success');
+
+    expect($first->refresh()->status)->toBe(DeliveryStatus::Delivered)
+        ->and($second->refresh()->status)->toBe(DeliveryStatus::Scheduled);
+
+    $this->post("/dashboard/deliveries/{$second->uuid}/fill")
+        ->assertRedirect()
+        ->assertSessionHas('success');
+
+    expect($second->refresh()->status)->toBe(DeliveryStatus::Filling);
 });

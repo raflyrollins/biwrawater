@@ -23,22 +23,31 @@ class DeliveryService
 {
     /**
      * Data halaman jadwal pengiriman untuk seorang driver.
+     * Task aktif diurutkan FIFO (paling awal terjadwal di atas); hanya
+     * tugas pertama yang boleh dikerjakan (is_current = true).
      *
-     * @return array{active: Collection<int, Delivery>, history: Collection<int, Delivery>}
+     * @return array{active: Collection<int, Delivery>, history: Collection<int, Delivery>, driver_status: string}
      */
     public function scheduleFor(Driver $driver): array
     {
+        $active = Delivery::query()
+            ->with([
+                'order:id,order_number,address_snapshot,status',
+                'truck:id,name,plate_number',
+                'photos:id,delivery_id,type,path',
+            ])
+            ->where('driver_id', $driver->id)
+            ->active()
+            ->orderBy('scheduled_at')
+            ->orderBy('id')
+            ->get()
+            ->each(function (Delivery $delivery, int $index): void {
+                $delivery->setAttribute('queue_position', $index + 1);
+                $delivery->setAttribute('is_current', $index === 0);
+            });
+
         return [
-            'active' => Delivery::query()
-                ->with([
-                    'order:id,order_number,address_snapshot,status',
-                    'truck:id,name,plate_number',
-                    'photos:id,delivery_id,type,path',
-                ])
-                ->where('driver_id', $driver->id)
-                ->active()
-                ->orderBy('scheduled_at')
-                ->get(),
+            'active' => $active,
             'history' => Delivery::query()
                 ->with(['order:id,order_number,status'])
                 ->where('driver_id', $driver->id)
@@ -46,6 +55,7 @@ class DeliveryService
                 ->latest()
                 ->limit(10)
                 ->get(),
+            'driver_status' => $driver->status->value,
         ];
     }
 
