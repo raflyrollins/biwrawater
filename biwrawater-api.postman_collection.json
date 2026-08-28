@@ -1,0 +1,700 @@
+{
+  "info": {
+    "name": "Biwrawater API",
+    "description": "API mobile Biwrawater (biwtermobile). Prefix `/api/v1`. Auth via Sanctum Bearer token. Set `base_url` environment variable (default `http://127.0.0.1:8000`). Login stores token automatically into `token` variable.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:8000"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "register"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Budi Pelanggan\",\n  \"email\": \"budi@biwrawater.id\",\n  \"phone\": \"081234567890\",\n  \"password\": \"rahasia123\",\n  \"password_confirmation\": \"rahasia123\"\n}"
+            },
+            "description": "Registrasi akun customer. `password` min 8 karakter, wajib `password_confirmation`."
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.token) { pm.environment.set('token', json.token); }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "login"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"budi@biwrawater.id\",\n  \"password\": \"rahasia123\"\n}"
+            },
+            "description": "Login customer/driver. Response berisi `token` + `user`. Token disimpan otomatis ke variable `token`."
+          },
+          "response": []
+        },
+        {
+          "name": "Me",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                { "key": "token", "value": "{{token}}", "type": "string" }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/me",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "me"]
+            },
+            "description": "Profil user terautentikasi."
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                { "key": "token", "value": "{{token}}", "type": "string" }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "logout"]
+            },
+            "description": "Cabut token aktif."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Katalog (Publik)",
+      "item": [
+        {
+          "name": "Services",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/services",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "services"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Promotions",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/promotions",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "promotions"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Config (Jam Operasional)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/config",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "config"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Zona & Area (Publik)",
+      "item": [
+        {
+          "name": "Zones",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/zones",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "zones"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Zones Lookup",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/zones/lookup",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "zones", "lookup"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"kecamatan\": \"Medan Marelan\",\n  \"kelurahan\": \"Terjun\"\n}"
+            },
+            "description": "Cari zona by kecamatan + kelurahan (exact/case-sensitive)."
+          },
+          "response": []
+        },
+        {
+          "name": "Areas Search",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/areas/search?q=Marelan",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "areas", "search"],
+              "query": [
+                { "key": "q", "value": "Marelan" }
+              ]
+            },
+            "description": "Pencarian area (full-text). Query opsional: `city`, `kecamatan`."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Alamat (Auth)",
+      "item": [
+        {
+          "name": "Index",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                { "key": "token", "value": "{{token}}", "type": "string" }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/addresses",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "addresses"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Store",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                { "key": "token", "value": "{{token}}", "type": "string" }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/addresses",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "addresses"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"label\": \"Rumah\",\n  \"recipient_name\": \"Budi\",\n  \"phone\": \"081234567890\",\n  \"street_address\": \"Jl. Terjun No. 12\",\n  \"district\": \"Medan Marelan\",\n  \"subdistrict\": \"Terjun\",\n  \"city\": \"Medan\",\n  \"postal_code\": \"20255\",\n  \"is_default\": true\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                { "key": "token", "value": "{{token}}", "type": "string" }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/addresses/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "addresses", "1"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"label\": \"Rumah\",\n  \"recipient_name\": \"Budi\",\n  \"phone\": \"081234567890\",\n  \"street_address\": \"Jl. Terjun No. 12\",\n  \"district\": \"Medan Marelan\",\n  \"subdistrict\": \"Terjun\",\n  \"city\": \"Medan\",\n  \"postal_code\": \"20255\",\n  \"is_default\": true\n}"
+            },
+            "description": "Path `{address}` dibind ke ID numerik (bukan UUID)."
+          },
+          "response": []
+        },
+        {
+          "name": "Destroy",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                { "key": "token", "value": "{{token}}", "type": "string" }
+              ]
+            },
+            "method": "DELETE",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/addresses/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "addresses", "1"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Checkout (Auth)",
+      "item": [
+        {
+          "name": "Validate Promo",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                { "key": "token", "value": "{{token}}", "type": "string" }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/checkout/validate-promo",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "checkout", "validate-promo"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"service_id\": 1,\n  \"promo_code\": \"HEMAT10\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Checkout",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                { "key": "token", "value": "{{token}}", "type": "string" }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/checkout",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "checkout"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"service_id\": 1,\n  \"address_id\": 1,\n  \"customer_note\": \"Kirim siang\"\n}"
+            },
+            "description": "Buat pesanan. EITHER `address_id` (alamat tersimpan) ATAU data alamat baru + `zone_id`. `service_id` = 1 (5.000L), 2 (8.000L), 3 (11.000L)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Pesanan & Pembayaran (Auth)",
+      "item": [
+        {
+          "name": "Orders",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                { "key": "token", "value": "{{token}}", "type": "string" }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/orders",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "orders"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Order Detail",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                { "key": "token", "value": "{{token}}", "type": "string" }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/orders/{uuid}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "orders", "{uuid}"]
+            },
+            "description": "Path `{order}` dibind ke UUID. Ganti `{uuid}` dengan nilai nyata."
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                { "key": "token", "value": "{{token}}", "type": "string" }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/orders/{uuid}/cancel",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "orders", "{uuid}", "cancel"]
+            },
+            "description": "Hanya pesanan `pending` yang bisa dibatalkan."
+          },
+          "response": []
+        },
+        {
+          "name": "Pay (Midtrans Snap)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                { "key": "token", "value": "{{token}}", "type": "string" }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/orders/{uuid}/pay",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "orders", "{uuid}", "pay"]
+            },
+            "description": "Minta token Snap. Butuh pesanan status `confirmed` + belum lunas. Catatan: `.env` MIDTRANS masih dikomentari — perlu konfigurasi key dulu agar berhasil."
+          },
+          "response": []
+        },
+        {
+          "name": "Payment Status",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                { "key": "token", "value": "{{token}}", "type": "string" }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/orders/{uuid}/pay-status",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "orders", "{uuid}", "pay-status"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Driver (Auth)",
+      "item": [
+        {
+          "name": "Deliveries",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                { "key": "token", "value": "{{token}}", "type": "string" }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/driver/deliveries",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "driver", "deliveries"]
+            },
+            "description": "Jadwal delivery driver (aktif FIFO + history)."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Status",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                { "key": "token", "value": "{{token}}", "type": "string" }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/driver/status",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "driver", "status"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"available\"\n}"
+            },
+            "description": "Ubah status `available` / `off_duty`."
+          },
+          "response": []
+        },
+        {
+          "name": "Fill",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                { "key": "token", "value": "{{token}}", "type": "string" }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/driver/deliveries/{uuid}/fill",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "driver", "deliveries", "{uuid}", "fill"]
+            },
+            "description": "Mulai pengisian (Scheduled → Filling). Butuh delivery milik driver & FIFO."
+          },
+          "response": []
+        },
+        {
+          "name": "Depart",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                { "key": "token", "value": "{{token}}", "type": "string" }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/driver/deliveries/{uuid}/depart",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "driver", "deliveries", "{uuid}", "depart"]
+            },
+            "description": "Berangkat (Filling → OnTheWay)."
+          },
+          "response": []
+        },
+        {
+          "name": "Unload",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                { "key": "token", "value": "{{token}}", "type": "string" }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/driver/deliveries/{uuid}/unload",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "driver", "deliveries", "{uuid}", "unload"]
+            },
+            "description": "Mulai penurunan (OnTheWay → Unloading)."
+          },
+          "response": []
+        },
+        {
+          "name": "Photos",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                { "key": "token", "value": "{{token}}", "type": "string" }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/driver/deliveries/{uuid}/photos",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "driver", "deliveries", "{uuid}", "photos"]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "type",
+                  "value": "filling",
+                  "type": "text"
+                },
+                {
+                  "key": "photo",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
+            },
+            "description": "Upload foto bukti. `type`: `filling` (saat Filling), `completion_tank` / `completion_person` (saat Unloading). Maks 4MB. Pilih file via tab Body → form-data."
+          },
+          "response": []
+        },
+        {
+          "name": "Deliver",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                { "key": "token", "value": "{{token}}", "type": "string" }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/driver/deliveries/{uuid}/deliver",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "driver", "deliveries", "{uuid}", "deliver"]
+            },
+            "description": "Selesaikan. Wajib ada foto `completion_tank` + `completion_person`."
+          },
+          "response": []
+        },
+        {
+          "name": "Fail",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                { "key": "token", "value": "{{token}}", "type": "string" }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/driver/deliveries/{uuid}/fail",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "driver", "deliveries", "{uuid}", "fail"]
+            },
+            "description": "Gagalkan delivery yang berjalan."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
