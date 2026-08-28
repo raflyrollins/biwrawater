@@ -11,6 +11,7 @@ use App\Models\Driver;
 use App\Models\Order;
 use App\Models\Truck;
 use App\Services\DeliveryService;
+use App\Support\DatabaseSearch;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -42,8 +43,14 @@ class OrderController extends Controller
             ->when($statuses !== [], fn ($query) => $query->whereIn('status', $statuses))
             ->when(is_string($search) && $search !== '', fn ($query) => $query
                 ->where(function ($q) use ($search) {
-                    $q->where('order_number', 'like', "%{$search}%")
-                        ->orWhereHas('user', fn ($u) => $u->where('name', 'like', "%{$search}%"));
+                    [$numberCondition, $numberBindings] = DatabaseSearch::containsCaseInsensitive('order_number', $search);
+
+                    $q->whereRaw($numberCondition, $numberBindings)
+                        ->orWhereHas('user', function ($u) use ($search) {
+                            [$nameCondition, $nameBindings] = DatabaseSearch::contains('name', $search);
+
+                            $u->whereRaw($nameCondition, $nameBindings);
+                        });
                 }))
             ->latest()
             ->paginate(15)

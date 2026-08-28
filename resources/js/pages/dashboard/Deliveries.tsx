@@ -2,7 +2,7 @@ import { Head, router } from '@inertiajs/react';
 import {
     ArrowRightToLine,
     Camera,
-    Clock,
+    ListOrdered,
     Lock,
     MapPin,
     PackageCheck,
@@ -145,6 +145,226 @@ function PhotoUpload({ deliveryUuid, type, existing }: PhotoUploadProps) {
     );
 }
 
+interface ActiveDeliveryCardProps {
+    delivery: DeliveryItem;
+    pendingUrl: string | null;
+    onAct: (url: string) => void;
+    onConfirmAct: (url: string, message: string) => void;
+}
+
+function ActiveDeliveryCard({
+    delivery,
+    pendingUrl,
+    onAct,
+    onConfirmAct,
+}: ActiveDeliveryCardProps) {
+    function renderActions() {
+        if (delivery.status === 'scheduled') {
+            return (
+                <button
+                    type="button"
+                    onClick={() => onAct(fill.url({ delivery: delivery.uuid }))}
+                    disabled={pendingUrl !== null}
+                    className="btn btn-brand flex-1 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                    Mulai Pengisian Air
+                </button>
+            );
+        }
+
+        if (delivery.status === 'filling') {
+            return (
+                <button
+                    type="button"
+                    onClick={() =>
+                        onAct(depart.url({ delivery: delivery.uuid }))
+                    }
+                    disabled={pendingUrl !== null}
+                    className="btn btn-brand flex-1 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                    Mulai Perjalanan
+                </button>
+            );
+        }
+
+        if (delivery.status === 'on_the_way') {
+            return (
+                <>
+                    <button
+                        type="button"
+                        onClick={() =>
+                            onAct(unload.url({ delivery: delivery.uuid }))
+                        }
+                        disabled={pendingUrl !== null}
+                        className="btn btn-brand flex-1 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        Mulai Penurunan
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() =>
+                            onConfirmAct(
+                                fail.url({ delivery: delivery.uuid }),
+                                'Tandai pengiriman ini gagal?',
+                            )
+                        }
+                        disabled={pendingUrl !== null}
+                        className="border border-danger-strong px-4 py-3 text-sm font-semibold text-danger-strong transition-colors hover:bg-danger-soft disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        Gagal
+                    </button>
+                </>
+            );
+        }
+
+        if (delivery.status === 'unloading') {
+            const ready =
+                hasPhoto(delivery, 'completion_tank') &&
+                hasPhoto(delivery, 'completion_person');
+
+            return (
+                <>
+                    <button
+                        type="button"
+                        onClick={() =>
+                            onConfirmAct(
+                                deliver.url({ delivery: delivery.uuid }),
+                                'Konfirmasi pengiriman selesai?',
+                            )
+                        }
+                        disabled={!ready || pendingUrl !== null}
+                        title={
+                            ready
+                                ? undefined
+                                : 'Unggah foto tangki dan foto penerima terlebih dahulu.'
+                        }
+                        className="btn btn-brand flex-1 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        Pengiriman Selesai
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() =>
+                            onConfirmAct(
+                                fail.url({ delivery: delivery.uuid }),
+                                'Tandai pengiriman ini gagal?',
+                            )
+                        }
+                        disabled={pendingUrl !== null}
+                        className="border border-danger-strong px-4 py-3 text-sm font-semibold text-danger-strong transition-colors hover:bg-danger-soft disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        Gagal
+                    </button>
+                </>
+            );
+        }
+
+        return null;
+    }
+
+    return (
+        <div className="card p-6">
+            <div className="flex items-start justify-between gap-3">
+                <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <span className="inline-flex h-6 w-6 items-center justify-center bg-brand text-xs font-bold text-on-brand">
+                            {delivery.queue_position}
+                        </span>
+                        <p className="font-mono text-sm font-bold tracking-wider text-fg-brand">
+                            {delivery.order.order_number}
+                        </p>
+                        <span className="inline-flex items-center gap-1 bg-brand-soft px-2 py-1 text-[10px] font-bold text-fg-brand-strong">
+                            <ArrowRightToLine size={11} aria-hidden="true" />
+                            SEDANG DIKERJAKAN
+                        </span>
+                    </div>
+                    <p className="mt-0.5 text-xs text-body-subtle">
+                        {delivery.truck
+                            ? `${delivery.truck.name} · ${delivery.truck.plate_number}`
+                            : '-'}
+                    </p>
+                </div>
+                <StatusBadge status={delivery.status} />
+            </div>
+
+            <div className="mt-4 flex items-start gap-3 text-sm text-body">
+                <MapPin
+                    size={16}
+                    aria-hidden="true"
+                    className="mt-0.5 shrink-0 text-body-subtle"
+                />
+                <div>
+                    <p className="font-semibold text-heading">
+                        {delivery.order.address_snapshot.recipient_name}
+                    </p>
+                    <p>{delivery.order.address_snapshot.street_address}</p>
+                    <p>
+                        {delivery.order.address_snapshot.subdistrict},{' '}
+                        {delivery.order.address_snapshot.district},{' '}
+                        {delivery.order.address_snapshot.city}
+                    </p>
+                </div>
+            </div>
+
+            <div className="mt-4 flex items-center justify-between border-t border-border-default pt-4 text-xs text-body-subtle">
+                <span>
+                    Jadwal:{' '}
+                    <span className="font-semibold text-heading">
+                        {formatDateTime(delivery.scheduled_at)}
+                    </span>
+                </span>
+            </div>
+
+            {(delivery.status === 'filling' ||
+                delivery.status === 'unloading') && (
+                <div className="mt-4 space-y-3">
+                    {delivery.status === 'filling' && (
+                        <PhotoUpload
+                            deliveryUuid={delivery.uuid}
+                            type="filling"
+                            existing={(delivery.photos ?? []).filter(
+                                (photo) => photo.type === 'filling',
+                            )}
+                        />
+                    )}
+                    {delivery.status === 'unloading' && (
+                        <>
+                            <PhotoUpload
+                                deliveryUuid={delivery.uuid}
+                                type="completion_tank"
+                                existing={(delivery.photos ?? []).filter(
+                                    (photo) => photo.type === 'completion_tank',
+                                )}
+                            />
+                            <PhotoUpload
+                                deliveryUuid={delivery.uuid}
+                                type="completion_person"
+                                existing={(delivery.photos ?? []).filter(
+                                    (photo) =>
+                                        photo.type === 'completion_person',
+                                )}
+                            />
+                        </>
+                    )}
+                </div>
+            )}
+
+            {delivery.note && (
+                <p className="mt-4 text-sm text-body">
+                    <span className="font-semibold text-heading">
+                        Catatan:{' '}
+                    </span>
+                    {delivery.note}
+                </p>
+            )}
+
+            <div className="mt-6 flex flex-wrap gap-3">{renderActions()}</div>
+        </div>
+    );
+}
+
+type DeliveriesTab = 'active' | 'history';
+
 export default function Deliveries({
     active,
     history,
@@ -156,6 +376,9 @@ export default function Deliveries({
 
     const confirm = useConfirm();
     const [pendingUrl, setPendingUrl] = useState<string | null>(null);
+    const [tab, setTab] = useState<DeliveriesTab>(
+        active.length > 0 ? 'active' : 'history',
+    );
 
     function setMyStatus(status: 'available' | 'off_duty') {
         router.post('/dashboard/driver/status', { status });
@@ -186,107 +409,9 @@ export default function Deliveries({
         }
     }
 
-    function renderActions(delivery: DeliveryItem) {
-        if (delivery.status === 'scheduled') {
-            return (
-                <button
-                    type="button"
-                    onClick={() => act(fill.url({ delivery: delivery.uuid }))}
-                    disabled={pendingUrl !== null}
-                    className="btn btn-brand flex-1 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                    Mulai Pengisian Air
-                </button>
-            );
-        }
-
-        if (delivery.status === 'filling') {
-            return (
-                <button
-                    type="button"
-                    onClick={() => act(depart.url({ delivery: delivery.uuid }))}
-                    disabled={pendingUrl !== null}
-                    className="btn btn-brand flex-1 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                    Mulai Perjalanan
-                </button>
-            );
-        }
-
-        if (delivery.status === 'on_the_way') {
-            return (
-                <>
-                    <button
-                        type="button"
-                        onClick={() =>
-                            act(unload.url({ delivery: delivery.uuid }))
-                        }
-                        disabled={pendingUrl !== null}
-                        className="btn btn-brand flex-1 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                        Mulai Penurunan
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() =>
-                            confirmAct(
-                                fail.url({ delivery: delivery.uuid }),
-                                'Tandai pengiriman ini gagal?',
-                            )
-                        }
-                        disabled={pendingUrl !== null}
-                        className="border border-danger-strong px-4 py-3 text-sm font-semibold text-danger-strong transition-colors hover:bg-danger-soft disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                        Gagal
-                    </button>
-                </>
-            );
-        }
-
-        if (delivery.status === 'unloading') {
-            const ready =
-                hasPhoto(delivery, 'completion_tank') &&
-                hasPhoto(delivery, 'completion_person');
-
-            return (
-                <>
-                    <button
-                        type="button"
-                        onClick={() =>
-                            confirmAct(
-                                deliver.url({ delivery: delivery.uuid }),
-                                'Konfirmasi pengiriman selesai?',
-                            )
-                        }
-                        disabled={!ready || pendingUrl !== null}
-                        title={
-                            ready
-                                ? undefined
-                                : 'Unggah foto tangki dan foto penerima terlebih dahulu.'
-                        }
-                        className="btn btn-brand flex-1 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                        Pengiriman Selesai
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() =>
-                            confirmAct(
-                                fail.url({ delivery: delivery.uuid }),
-                                'Tandai pengiriman ini gagal?',
-                            )
-                        }
-                        disabled={pendingUrl !== null}
-                        className="border border-danger-strong px-4 py-3 text-sm font-semibold text-danger-strong transition-colors hover:bg-danger-soft disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                        Gagal
-                    </button>
-                </>
-            );
-        }
-
-        return null;
-    }
+    const current =
+        active.find((delivery) => delivery.is_current) ?? active[0] ?? null;
+    const queued = active.filter((delivery) => delivery !== current);
 
     return (
         <DashboardLayout>
@@ -296,7 +421,7 @@ export default function Deliveries({
                 <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
                     <div>
                         <h2 className="mb-1 text-2xl text-heading">
-                            Pengiriman Aktif
+                            Jadwal Pengiriman
                         </h2>
                         <p className="text-sm text-body-subtle">
                             Silahkan kerjakan tugas sesuai antrian yang tersedia
@@ -329,240 +454,247 @@ export default function Deliveries({
                     </div>
                 </div>
 
-                {active.length === 0 ? (
-                    <div className="card flex flex-col items-center px-6 py-16 text-center">
-                        <PackageCheck
-                            size={40}
-                            aria-hidden="true"
-                            className="text-body-subtle"
-                        />
-                        <p className="mt-4 font-semibold text-heading">
-                            Tidak ada pengiriman aktif
-                        </p>
-                        <p className="mt-1 text-sm text-body-subtle">
-                            Cek kembali jadwal baru dari admin.
-                        </p>
+                <div className="border-b border-border-default">
+                    <div
+                        role="tablist"
+                        aria-label="Jadwal pengiriman"
+                        className="flex"
+                    >
+                        <button
+                            type="button"
+                            role="tab"
+                            id="deliveries-tab-active"
+                            aria-selected={tab === 'active'}
+                            aria-controls="deliveries-panel-active"
+                            onClick={() => setTab('active')}
+                            className={cn(
+                                'flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors',
+                                tab === 'active'
+                                    ? 'border-brand text-fg-brand'
+                                    : 'border-transparent text-body-subtle hover:text-heading',
+                            )}
+                        >
+                            Aktif
+                            {active.length > 0 && (
+                                <span className="rounded-sm bg-neutral-tertiary-soft px-1.5 py-0.5 text-xs font-bold text-heading">
+                                    {active.length}
+                                </span>
+                            )}
+                        </button>
+                        <button
+                            type="button"
+                            role="tab"
+                            id="deliveries-tab-history"
+                            aria-selected={tab === 'history'}
+                            aria-controls="deliveries-panel-history"
+                            onClick={() => setTab('history')}
+                            className={cn(
+                                'border-b-2 px-4 py-3 text-sm font-medium transition-colors',
+                                tab === 'history'
+                                    ? 'border-brand text-fg-brand'
+                                    : 'border-transparent text-body-subtle hover:text-heading',
+                            )}
+                        >
+                            Riwayat
+                        </button>
                     </div>
-                ) : (
-                    <div className="grid gap-6 lg:grid-cols-2">
-                        {active.map((delivery) => (
-                            <div
-                                key={delivery.id}
-                                className={cn(
-                                    'card flex flex-col p-6',
-                                    !delivery.is_current && 'opacity-75',
-                                )}
-                            >
-                                <div className="flex items-start justify-between gap-3">
-                                    <div>
-                                        <div className="flex items-center gap-2">
-                                            <span className="inline-flex h-6 w-6 items-center justify-center bg-brand text-xs font-bold text-on-brand">
-                                                {delivery.queue_position}
+                </div>
+
+                {tab === 'active' ? (
+                    <div
+                        id="deliveries-panel-active"
+                        role="tabpanel"
+                        aria-labelledby="deliveries-tab-active"
+                        className="mt-8"
+                    >
+                        {current === null ? (
+                            <div className="card flex flex-col items-center px-6 py-16 text-center">
+                                <PackageCheck
+                                    size={40}
+                                    aria-hidden="true"
+                                    className="text-body-subtle"
+                                />
+                                <p className="mt-4 font-semibold text-heading">
+                                    Tidak ada pengiriman aktif
+                                </p>
+                                <p className="mt-1 text-sm text-body-subtle">
+                                    Cek kembali jadwal baru dari admin.
+                                </p>
+                            </div>
+                        ) : (
+                            <>
+                                <ActiveDeliveryCard
+                                    delivery={current}
+                                    pendingUrl={pendingUrl}
+                                    onAct={act}
+                                    onConfirmAct={confirmAct}
+                                />
+
+                                {queued.length > 0 && (
+                                    <section className="mt-10">
+                                        <h3 className="mb-1 text-xl text-heading">
+                                            <span className="inline-flex items-center gap-2">
+                                                <ListOrdered
+                                                    size={18}
+                                                    aria-hidden="true"
+                                                    className="text-body-subtle"
+                                                />
+                                                Antrian Selanjutnya
                                             </span>
-                                            <p className="font-mono text-sm font-bold tracking-wider text-fg-brand">
-                                                {delivery.order.order_number}
-                                            </p>
-                                            {delivery.is_current ? (
-                                                <span className="inline-flex items-center gap-1 rounded-sm bg-brand-soft px-2 py-1 text-[10px] font-bold text-fg-brand-strong">
-                                                    <ArrowRightToLine
-                                                        size={11}
-                                                        aria-hidden="true"
-                                                    />
-                                                    SEDANG DIKERJAKAN
-                                                </span>
-                                            ) : (
-                                                <span className="inline-flex items-center gap-1 rounded-sm bg-neutral-tertiary-soft px-2 py-1 text-[10px] font-bold text-body-subtle">
-                                                    <Clock
-                                                        size={11}
-                                                        aria-hidden="true"
-                                                    />
-                                                    MENUNGGU GILIRAN
-                                                </span>
-                                            )}
-                                        </div>
-                                        <p className="mt-0.5 text-xs text-body-subtle">
-                                            {delivery.truck
-                                                ? `${delivery.truck.name} · ${delivery.truck.plate_number}`
-                                                : '-'}
-                                        </p>
-                                    </div>
-                                    <StatusBadge status={delivery.status} />
-                                </div>
-
-                                <div className="mt-4 flex items-start gap-3 text-sm text-body">
-                                    <MapPin
-                                        size={16}
-                                        aria-hidden="true"
-                                        className="mt-0.5 shrink-0 text-body-subtle"
-                                    />
-                                    <div>
-                                        <p className="font-semibold text-heading">
-                                            {
-                                                delivery.order.address_snapshot
-                                                    .recipient_name
-                                            }
-                                        </p>
-                                        <p>
-                                            {
-                                                delivery.order.address_snapshot
-                                                    .street_address
-                                            }
-                                        </p>
-                                        <p>
-                                            {
-                                                delivery.order.address_snapshot
-                                                    .subdistrict
-                                            }
-                                            ,{' '}
-                                            {
-                                                delivery.order.address_snapshot
-                                                    .district
-                                            }
-                                            ,{' '}
-                                            {
-                                                delivery.order.address_snapshot
-                                                    .city
-                                            }
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div className="mt-4 flex items-center justify-between border-t border-border-default pt-4 text-xs text-body-subtle">
-                                    <span>
-                                        Jadwal:{' '}
-                                        <span className="font-semibold text-heading">
-                                            {formatDateTime(
-                                                delivery.scheduled_at,
-                                            )}
-                                        </span>
-                                    </span>
-                                </div>
-
-                                {(delivery.status === 'filling' ||
-                                    delivery.status === 'unloading') && (
-                                    <div className="mt-4 space-y-3">
-                                        {delivery.status === 'filling' && (
-                                            <PhotoUpload
-                                                deliveryUuid={delivery.uuid}
-                                                type="filling"
-                                                existing={(
-                                                    delivery.photos ?? []
-                                                ).filter(
-                                                    (photo) =>
-                                                        photo.type ===
-                                                        'filling',
-                                                )}
-                                            />
-                                        )}
-                                        {delivery.status === 'unloading' && (
-                                            <>
-                                                <PhotoUpload
-                                                    deliveryUuid={delivery.uuid}
-                                                    type="completion_tank"
-                                                    existing={(
-                                                        delivery.photos ?? []
-                                                    ).filter(
-                                                        (photo) =>
-                                                            photo.type ===
-                                                            'completion_tank',
-                                                    )}
-                                                />
-                                                <PhotoUpload
-                                                    deliveryUuid={delivery.uuid}
-                                                    type="completion_person"
-                                                    existing={(
-                                                        delivery.photos ?? []
-                                                    ).filter(
-                                                        (photo) =>
-                                                            photo.type ===
-                                                            'completion_person',
-                                                    )}
-                                                />
-                                            </>
-                                        )}
-                                    </div>
-                                )}
-
-                                {delivery.note && (
-                                    <p className="mt-4 text-sm text-body">
-                                        <span className="font-semibold text-heading">
-                                            Catatan:{' '}
-                                        </span>
-                                        {delivery.note}
-                                    </p>
-                                )}
-
-                                <div className="mt-auto pt-5">
-                                    {delivery.is_current ? (
-                                        <div className="flex flex-wrap gap-3">
-                                            {renderActions(delivery)}
-                                        </div>
-                                    ) : (
-                                        <p className="flex items-center gap-2 rounded-sm bg-neutral-tertiary-soft px-4 py-3 text-xs font-semibold text-body-subtle">
+                                        </h3>
+                                        <p className="mb-6 flex items-center gap-2 text-sm text-body-subtle">
                                             <Lock
                                                 size={14}
                                                 aria-hidden="true"
                                                 className="shrink-0"
                                             />
-                                            Tugas ini belum bisa dikerjakan.
-                                            Selesaikan tugas paling awal dulu
-                                            (FIFO).
+                                            Tugas belum bisa dikerjakan sampai
+                                            selesai tugas paling awal (FIFO).
                                         </p>
-                                    )}
+
+                                        <div className="card">
+                                            <div className="table-wrap">
+                                                <table className="table">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>No. Pesanan</th>
+                                                            <th>Penerima</th>
+                                                            <th>Tujuan</th>
+                                                            <th>Jadwal</th>
+                                                            <th>Status</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {queued.map(
+                                                            (delivery) => (
+                                                                <tr
+                                                                    key={
+                                                                        delivery.id
+                                                                    }
+                                                                >
+                                                                    <td className="font-mono text-sm font-semibold text-heading">
+                                                                        {
+                                                                            delivery
+                                                                                .order
+                                                                                .order_number
+                                                                        }
+                                                                    </td>
+                                                                    <td className="font-semibold text-heading">
+                                                                        {
+                                                                            delivery
+                                                                                .order
+                                                                                .address_snapshot
+                                                                                .recipient_name
+                                                                        }
+                                                                    </td>
+                                                                    <td>
+                                                                        {
+                                                                            delivery
+                                                                                .order
+                                                                                .address_snapshot
+                                                                                .subdistrict
+                                                                        }
+                                                                        ,{' '}
+                                                                        {
+                                                                            delivery
+                                                                                .order
+                                                                                .address_snapshot
+                                                                                .district
+                                                                        }
+                                                                        ,{' '}
+                                                                        {
+                                                                            delivery
+                                                                                .order
+                                                                                .address_snapshot
+                                                                                .city
+                                                                        }
+                                                                    </td>
+                                                                    <td>
+                                                                        {formatDateTime(
+                                                                            delivery.scheduled_at,
+                                                                        )}
+                                                                    </td>
+                                                                    <td>
+                                                                        <StatusBadge
+                                                                            status={
+                                                                                delivery.status
+                                                                            }
+                                                                        />
+                                                                    </td>
+                                                                </tr>
+                                                            ),
+                                                        )}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </section>
+                                )}
+                            </>
+                        )}
+                    </div>
+                ) : (
+                    <div
+                        id="deliveries-panel-history"
+                        role="tabpanel"
+                        aria-labelledby="deliveries-tab-history"
+                        className="mt-8"
+                    >
+                        <h3 className="mb-1 text-xl text-heading">Riwayat</h3>
+                        <p className="mb-6 text-sm text-body-subtle">
+                            10 pengiriman terakhir yang selesai atau gagal.
+                        </p>
+
+                        {history.length === 0 ? (
+                            <p className="rounded-sm bg-neutral-tertiary-soft px-6 py-12 text-center text-sm text-body-subtle">
+                                Belum ada riwayat pengiriman.
+                            </p>
+                        ) : (
+                            <div className="card">
+                                <div className="table-wrap">
+                                    <table className="table">
+                                        <thead>
+                                            <tr>
+                                                <th>No. Pesanan</th>
+                                                <th>Jadwal</th>
+                                                <th>Selesai</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {history.map((delivery) => (
+                                                <tr key={delivery.id}>
+                                                    <td className="font-mono text-sm font-semibold text-heading">
+                                                        {
+                                                            delivery.order
+                                                                .order_number
+                                                        }
+                                                    </td>
+                                                    <td>
+                                                        {formatDateTime(
+                                                            delivery.scheduled_at,
+                                                        )}
+                                                    </td>
+                                                    <td>
+                                                        {formatDateTime(
+                                                            delivery.delivered_at ??
+                                                                delivery.departed_at,
+                                                        )}
+                                                    </td>
+                                                    <td>
+                                                        <StatusBadge
+                                                            status={
+                                                                delivery.status
+                                                            }
+                                                        />
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
-                        ))}
-                    </div>
-                )}
-
-                <h2 className="mt-12 mb-1 text-2xl text-heading">Riwayat</h2>
-                <p className="mb-8 text-sm text-body-subtle">
-                    10 pengiriman terakhir yang selesai atau gagal.
-                </p>
-
-                {history.length === 0 ? (
-                    <p className="rounded-sm bg-neutral-tertiary-soft px-6 py-12 text-center text-sm text-body-subtle">
-                        Belum ada riwayat pengiriman.
-                    </p>
-                ) : (
-                    <div className="card">
-                        <div className="table-wrap">
-                            <table className="table">
-                                <thead>
-                                    <tr>
-                                        <th>No. Pesanan</th>
-                                        <th>Jadwal</th>
-                                        <th>Selesai</th>
-                                        <th>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {history.map((delivery) => (
-                                        <tr key={delivery.id}>
-                                            <td className="font-mono text-sm font-semibold text-heading">
-                                                {delivery.order.order_number}
-                                            </td>
-                                            <td>
-                                                {formatDateTime(
-                                                    delivery.scheduled_at,
-                                                )}
-                                            </td>
-                                            <td>
-                                                {formatDateTime(
-                                                    delivery.delivered_at ??
-                                                        delivery.departed_at,
-                                                )}
-                                            </td>
-                                            <td>
-                                                <StatusBadge
-                                                    status={delivery.status}
-                                                />
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                        )}
                     </div>
                 )}
             </div>

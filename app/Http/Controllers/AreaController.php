@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Models\Zone;
+use App\Support\DatabaseSearch;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -24,9 +25,9 @@ class AreaController extends Controller
         $zones = Zone::query()
             ->active()
             ->where(function ($q) use ($query) {
-                $q->where('kecamatan', 'LIKE', "%{$query}%")
-                    ->orWhere('kelurahan', 'LIKE', "%{$query}%")
-                    ->orWhere('city', 'LIKE', "%{$query}%");
+                [$condition, $bindings] = DatabaseSearch::containsAny(['kecamatan', 'kelurahan', 'city'], $query);
+
+                $q->whereRaw($condition, $bindings);
             })
             ->when($city, fn ($q) => $q->where('city', $city))
             ->when($kecamatan, fn ($q) => $q->where('kecamatan', $kecamatan))

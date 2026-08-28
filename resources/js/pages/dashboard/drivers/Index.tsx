@@ -3,7 +3,7 @@ import { IdCard, Plus, X } from 'lucide-react';
 
 import { useState } from 'react';
 
-import type { FormEvent, ReactNode } from 'react';
+import type { FormEvent } from 'react';
 
 import DashboardLayout from '../../../components/dashboard/DashboardLayout';
 import Pagination from '../../../components/dashboard/Pagination';
@@ -14,6 +14,7 @@ import { useConfirm } from '../../../components/ui/ConfirmDialog';
 import { cn } from '../../../lib/utils';
 import {
     destroy as destroyDriver,
+    setStatus as setDriverStatusRoute,
     store as storeDriver,
     update as updateDriver,
 } from '../../../routes/dashboard/drivers';
@@ -284,17 +285,6 @@ function DriverFormModal({ editing, onClose }: DriverFormModalProps) {
     );
 }
 
-function RowValue({ label, children }: { label: string; children: ReactNode }) {
-    return (
-        <div>
-            <p className="text-xs text-body-subtle">{label}</p>
-            <p className="mt-0.5 text-sm font-semibold text-heading">
-                {children}
-            </p>
-        </div>
-    );
-}
-
 export default function DriversIndex({ drivers }: DriversIndexProps) {
     const [modalOpen, setModalOpen] = useState(false);
     const [editing, setEditing] = useState<DriverItem | null>(null);
@@ -313,7 +303,9 @@ export default function DriversIndex({ drivers }: DriversIndexProps) {
         driver: DriverItem,
         status: 'available' | 'off_duty',
     ) {
-        router.post(`/dashboard/drivers/${driver.uuid}/status`, { status });
+        router.post(setDriverStatusRoute.url({ driver: driver.uuid }), {
+            status,
+        });
     }
 
     const confirm = useConfirm();
@@ -353,9 +345,9 @@ export default function DriversIndex({ drivers }: DriversIndexProps) {
                     </button>
                 </div>
 
-                <div className="mt-8 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-                    {drivers.data.length === 0 && (
-                        <div className="col-span-full flex flex-col items-center rounded-sm bg-neutral-tertiary-soft px-6 py-16 text-center">
+                <div className="card mt-8">
+                    {drivers.data.length === 0 ? (
+                        <div className="flex flex-col items-center px-6 py-16 text-center">
                             <IdCard
                                 size={40}
                                 aria-hidden="true"
@@ -369,84 +361,108 @@ export default function DriversIndex({ drivers }: DriversIndexProps) {
                                 pengiriman.
                             </p>
                         </div>
-                    )}
-                    {drivers.data.map((driver) => (
-                        <div key={driver.id} className="card flex flex-col p-6">
-                            <div className="flex items-start justify-between gap-3">
-                                <div>
-                                    <h3 className="text-lg font-bold text-heading">
-                                        {driver.user.name}
-                                    </h3>
-                                    <p className="mt-1 text-sm text-body-subtle">
-                                        {driver.user.email}
-                                    </p>
-                                </div>
-                                <div className="flex shrink-0 flex-col items-end gap-2">
-                                    <StatusBadge status={driver.status} />
-                                    {driver.status === 'available' && (
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                setDriverStatus(
-                                                    driver,
-                                                    'off_duty',
-                                                )
-                                            }
-                                            className="text-xs font-semibold text-body-subtle transition-colors hover:text-heading"
-                                        >
-                                            Istirahatkan
-                                        </button>
-                                    )}
-                                    {driver.status === 'off_duty' && (
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                setDriverStatus(
-                                                    driver,
-                                                    'available',
-                                                )
-                                            }
-                                            className="text-xs font-semibold text-fg-brand no-underline transition-colors hover:text-fg-brand-strong"
-                                        >
-                                            Aktifkan Kembali
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-
-                            {driver.notes && (
-                                <p className="mt-3 text-sm text-body">
-                                    {driver.notes}
-                                </p>
-                            )}
-
-                            <div className="mt-4 grid grid-cols-2 gap-3 border-t border-border-default pt-4">
-                                <RowValue label="Telepon">
-                                    {driver.user.phone ?? '-'}
-                                </RowValue>
-                                <RowValue label="No. SIM">
-                                    {driver.license_number ?? '-'}
-                                </RowValue>
-                            </div>
-
-                            <div className="mt-6 flex gap-3">
-                                <button
-                                    type="button"
-                                    onClick={() => openEdit(driver)}
-                                    className="flex-1 border border-border-default px-4 py-2.5 text-sm font-semibold text-body transition-colors hover:bg-neutral-tertiary-soft"
-                                >
-                                    Ubah
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => destroy(driver)}
-                                    className="flex-1 border border-danger-strong px-4 py-2.5 text-sm font-semibold text-danger-strong transition-colors hover:bg-danger-soft"
-                                >
-                                    Nonaktifkan
-                                </button>
-                            </div>
+                    ) : (
+                        <div className="table-wrap">
+                            <table className="table">
+                                <thead>
+                                    <tr>
+                                        <th>Driver</th>
+                                        <th>Telepon</th>
+                                        <th>No. SIM</th>
+                                        <th>Status</th>
+                                        <th>
+                                            <span className="sr-only">
+                                                Aksi
+                                            </span>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {drivers.data.map((driver) => (
+                                        <tr key={driver.id}>
+                                            <td>
+                                                <p className="font-semibold text-heading">
+                                                    {driver.user.name}
+                                                </p>
+                                                <p className="mt-0.5 text-xs text-body-subtle">
+                                                    {driver.user.email}
+                                                </p>
+                                                {driver.notes && (
+                                                    <p className="mt-0.5 text-xs text-body-subtle">
+                                                        {driver.notes}
+                                                    </p>
+                                                )}
+                                            </td>
+                                            <td>{driver.user.phone ?? '-'}</td>
+                                            <td>
+                                                {driver.license_number ?? '-'}
+                                            </td>
+                                            <td>
+                                                <StatusBadge
+                                                    status={driver.status}
+                                                />
+                                            </td>
+                                            <td>
+                                                <div className="flex flex-wrap gap-x-4 gap-y-1">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            openEdit(driver)
+                                                        }
+                                                        className="text-xs font-semibold text-fg-brand hover:underline"
+                                                    >
+                                                        Ubah
+                                                    </button>
+                                                    {driver.status ===
+                                                        'available' && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                setDriverStatus(
+                                                                    driver,
+                                                                    'off_duty',
+                                                                )
+                                                            }
+                                                            className="text-xs font-semibold text-body-subtle hover:text-heading hover:underline"
+                                                        >
+                                                            Istirahatkan
+                                                        </button>
+                                                    )}
+                                                    {driver.status ===
+                                                        'off_duty' && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                setDriverStatus(
+                                                                    driver,
+                                                                    'available',
+                                                                )
+                                                            }
+                                                            className="text-xs font-semibold text-fg-brand hover:underline"
+                                                        >
+                                                            Aktifkan Kembali
+                                                        </button>
+                                                    )}
+                                                    {driver.status !==
+                                                        'on_duty' && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                destroy(driver)
+                                                            }
+                                                            className="text-xs font-semibold text-danger-strong hover:underline"
+                                                        >
+                                                            Nonaktifkan
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
-                    ))}
+                    )}
                 </div>
 
                 <Pagination links={drivers.links} />

@@ -9,6 +9,7 @@ use App\Enums\Role;
 use App\Enums\UserRole;
 use App\Models\Driver;
 use App\Models\User;
+use App\Services\DriverStatusService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -20,6 +21,8 @@ use Laravel\Head\Facades\Head;
 
 class DriverController extends Controller
 {
+    public function __construct(private readonly DriverStatusService $driverStatus) {}
+
     public function index(): Response
     {
         Head::title('Driver');
@@ -83,15 +86,11 @@ class DriverController extends Controller
     {
         $newStatus = $this->resolveDrivableStatus($request);
 
-        $error = $this->statusChangeError($driver, $newStatus);
+        $error = $this->driverStatus->change($driver, $newStatus);
 
         if ($error !== null) {
             return back()->with('error', $error);
         }
-
-        $driver->update([
-            'status' => $newStatus,
-        ]);
 
         return back()->with('success', 'Status driver diperbarui.');
     }
@@ -111,15 +110,11 @@ class DriverController extends Controller
 
         $newStatus = $this->resolveDrivableStatus($request);
 
-        $error = $this->statusChangeError($driver, $newStatus);
+        $error = $this->driverStatus->change($driver, $newStatus);
 
         if ($error !== null) {
             return back()->with('error', $error);
         }
-
-        $driver->update([
-            'status' => $newStatus,
-        ]);
 
         return back()->with('success', 'Status Anda diperbarui.');
     }
@@ -144,19 +139,6 @@ class DriverController extends Controller
         ]);
 
         return DriverStatus::from($validated['status']);
-    }
-
-    private function statusChangeError(Driver $driver, DriverStatus $newStatus): ?string
-    {
-        if ($driver->status->is(DriverStatus::OnDuty)) {
-            return 'Driver sedang bertugas, status tidak dapat diubah.';
-        }
-
-        if ($newStatus->is(DriverStatus::OffDuty) && $driver->deliveries()->active()->exists()) {
-            return 'Driver masih memiliki tugas aktif, selesaikan atau alihkan tugasnya terlebih dahulu.';
-        }
-
-        return null;
     }
 
     /**

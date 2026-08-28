@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -51,4 +52,9 @@ expect()->extend('toBeOne', function () {
 function something()
 {
     // ..
+}
+
+function apiTokenFor(User $user): string
+{
+    return $user->createToken('mobile')->plainTextToken;
 }

@@ -3,14 +3,14 @@ import { Plus, Truck as TruckIcon, X } from 'lucide-react';
 
 import { useState } from 'react';
 
-import type { FormEvent, ReactNode } from 'react';
+import type { FormEvent } from 'react';
 
 import DashboardLayout from '../../../components/dashboard/DashboardLayout';
 import Pagination from '../../../components/dashboard/Pagination';
 import type { PaginationLink } from '../../../components/dashboard/Pagination';
+import StatusBadge from '../../../components/dashboard/StatusBadge';
 import FieldError from '../../../components/public/FieldError';
 import { useConfirm } from '../../../components/ui/ConfirmDialog';
-import { STATUS_LABELS } from '../../../lib/labels';
 import { cn } from '../../../lib/utils';
 import {
     destroy as destroyTruck,
@@ -28,7 +28,7 @@ interface Truck {
     status: string;
     notes: string | null;
     default_driver_id: number | null;
-    defaultDriver: {
+    default_driver: {
         user: { name: string };
     } | null;
 }
@@ -277,15 +277,16 @@ function TruckFormModal({ editing, drivers, onClose }: TruckFormModalProps) {
     );
 }
 
-function RowValue({ label, children }: { label: string; children: ReactNode }) {
-    return (
-        <div>
-            <p className="text-xs text-body-subtle">{label}</p>
-            <p className="mt-0.5 text-sm font-semibold text-heading">
-                {children}
-            </p>
-        </div>
-    );
+function statusActionLabel(status: string): string {
+    if (status === 'available') {
+        return 'Jadwalkan Perbaikan';
+    }
+
+    if (status === 'maintenance') {
+        return 'Kembalikan';
+    }
+
+    return 'Aktifkan Kembali';
 }
 
 export default function TrucksIndex({ trucks, drivers }: TrucksIndexProps) {
@@ -343,9 +344,9 @@ export default function TrucksIndex({ trucks, drivers }: TrucksIndexProps) {
                     </button>
                 </div>
 
-                <div className="mt-8 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-                    {trucks.data.length === 0 && (
-                        <div className="col-span-full flex flex-col items-center rounded-sm bg-neutral-tertiary-soft px-6 py-16 text-center">
+                <div className="card mt-8">
+                    {trucks.data.length === 0 ? (
+                        <div className="flex flex-col items-center px-6 py-16 text-center">
                             <TruckIcon
                                 size={40}
                                 aria-hidden="true"
@@ -359,71 +360,95 @@ export default function TrucksIndex({ trucks, drivers }: TrucksIndexProps) {
                                 pengiriman.
                             </p>
                         </div>
-                    )}
-                    {trucks.data.map((truck) => (
-                        <div key={truck.id} className="card flex flex-col p-6">
-                            <div className="flex items-start justify-between gap-3">
-                                <div>
-                                    <h3 className="font-mono text-lg font-bold tracking-wider text-heading">
-                                        {truck.plate_number}
-                                    </h3>
-                                    <p className="mt-1 text-sm text-body-subtle">
-                                        {truck.name}
-                                    </p>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={() => toggle(truck)}
-                                    className={cn(
-                                        'shrink-0 text-sm font-semibold no-underline',
-                                        truck.status === 'available'
-                                            ? 'text-success-strong'
-                                            : truck.status === 'retired'
-                                              ? 'text-body-subtle'
-                                              : 'text-warning-strong',
-                                    )}
-                                    title="Ubah status"
-                                >
-                                    {STATUS_LABELS[truck.status]}
-                                </button>
-                            </div>
-
-                            {truck.notes && (
-                                <p className="mt-3 text-sm text-body">
-                                    {truck.notes}
-                                </p>
-                            )}
-
-                            <div className="mt-4 grid grid-cols-2 gap-3 border-t border-border-default pt-4">
-                                <RowValue label="Kapasitas">
-                                    {truck.capacity_liters.toLocaleString(
-                                        'id-ID',
-                                    )}{' '}
-                                    liter
-                                </RowValue>
-                                <RowValue label="Driver Default">
-                                    {truck.defaultDriver?.user.name ?? '-'}
-                                </RowValue>
-                            </div>
-
-                            <div className="mt-6 flex gap-3">
-                                <button
-                                    type="button"
-                                    onClick={() => openEdit(truck)}
-                                    className="flex-1 border border-border-default px-4 py-2.5 text-sm font-semibold text-body transition-colors hover:bg-neutral-tertiary-soft"
-                                >
-                                    Ubah
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => destroy(truck)}
-                                    className="flex-1 border border-danger-strong px-4 py-2.5 text-sm font-semibold text-danger-strong transition-colors hover:bg-danger-soft"
-                                >
-                                    Nonaktifkan
-                                </button>
-                            </div>
+                    ) : (
+                        <div className="table-wrap">
+                            <table className="table">
+                                <thead>
+                                    <tr>
+                                        <th>Armada</th>
+                                        <th>Kapasitas</th>
+                                        <th>Driver Default</th>
+                                        <th>Status</th>
+                                        <th>
+                                            <span className="sr-only">
+                                                Aksi
+                                            </span>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {trucks.data.map((truck) => (
+                                        <tr key={truck.id}>
+                                            <td>
+                                                <p className="font-mono text-sm font-bold tracking-wider text-heading">
+                                                    {truck.plate_number}
+                                                </p>
+                                                <p className="mt-0.5 text-xs text-body-subtle">
+                                                    {truck.name}
+                                                </p>
+                                                {truck.notes && (
+                                                    <p className="mt-0.5 text-xs text-body-subtle">
+                                                        {truck.notes}
+                                                    </p>
+                                                )}
+                                            </td>
+                                            <td>
+                                                {truck.capacity_liters.toLocaleString(
+                                                    'id-ID',
+                                                )}{' '}
+                                                liter
+                                            </td>
+                                            <td>
+                                                {truck.default_driver?.user
+                                                    ?.name ?? '-'}
+                                            </td>
+                                            <td>
+                                                <StatusBadge
+                                                    status={truck.status}
+                                                />
+                                            </td>
+                                            <td>
+                                                <div className="flex flex-wrap gap-x-4 gap-y-1">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            openEdit(truck)
+                                                        }
+                                                        className="text-xs font-semibold text-fg-brand hover:underline"
+                                                    >
+                                                        Ubah
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            toggle(truck)
+                                                        }
+                                                        className="text-xs font-semibold text-body-subtle hover:text-heading hover:underline"
+                                                    >
+                                                        {statusActionLabel(
+                                                            truck.status,
+                                                        )}
+                                                    </button>
+                                                    {truck.status !==
+                                                        'retired' && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                destroy(truck)
+                                                            }
+                                                            className="text-xs font-semibold text-danger-strong hover:underline"
+                                                        >
+                                                            Nonaktifkan
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
-                    ))}
+                    )}
                 </div>
 
                 <Pagination links={trucks.links} />

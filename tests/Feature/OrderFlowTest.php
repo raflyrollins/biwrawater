@@ -531,3 +531,32 @@ test('tugas berikutnya boleh dikerjakan setelah tugas pertama selesai', function
 
     expect($second->refresh()->status)->toBe(DeliveryStatus::Filling);
 });
+
+test('admin mencari pesanan berdasarkan nomor tanpa peka huruf', function () {
+    $admin = User::factory()->admin()->create();
+    $keyword = 'WO-2026-ABC-001';
+    $order = Order::factory()->create(['order_number' => $keyword]);
+    Order::factory()->create(['order_number' => 'WO-2025-DEF-002']);
+
+    $this->actingAs($admin)
+        ->get('/dashboard/orders?search='.urlencode(strtolower('wo-2026-abc')))
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('dashboard/orders/Index')
+            ->has('orders.data', 1)
+            ->where('orders.data.0.order_number', $keyword));
+});
+
+test('admin mencari pesanan berdasarkan nama pelanggan tanpa peka huruf', function () {
+    $admin = User::factory()->admin()->create();
+    $customer = User::factory()->create(['name' => 'Baktiadi Nashiruddin']);
+    Order::factory()->for($customer)->create();
+    $other = User::factory()->create(['name' => 'Zelaya Yulianti']);
+    Order::factory()->for($other)->create();
+
+    $this->actingAs($admin)
+        ->get('/dashboard/orders?search='.urlencode('nashiruddin'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('dashboard/orders/Index')
+            ->has('orders.data', 1)
+            ->where('orders.data.0.user.name', 'Baktiadi Nashiruddin'));
+});
