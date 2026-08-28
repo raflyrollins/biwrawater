@@ -27,4 +27,5 @@ yarn-error.log
 /.vscode
 /.zed
 **/*.md
+!/PROGRESS-DEPLOY.md
 /sessions
