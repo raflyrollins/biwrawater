@@ -1,0 +1,20 @@
+# Biwrawater Reverb Server (broadcast real-time)
+# Salin ke /etc/systemd/system/biwrawater-reverb.service
+# lalu: sudo systemctl daemon-reload && sudo systemctl enable --now biwrawater-reverb
+#
+# --host=0.0.0.0 agar dapat diakses dari luar VPS (lewat nginx proxy ke /app/).
+
+[Unit]
+Description=Biwrawater Reverb Server
+After=network.target
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/biwrawater
+ExecStart=/usr/bin/php artisan reverb:start --host=0.0.0.0 --port=8080
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

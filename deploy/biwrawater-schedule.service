@@ -1,0 +1,19 @@
+# Biwrawater Scheduler
+# Menjalankan artisan schedule:work untuk batas pembayaran otomatis dll.
+# Salin ke /etc/systemd/system/biwrawater-schedule.service
+# lalu: sudo systemctl daemon-reload && sudo systemctl enable --now biwrawater-schedule
+
+[Unit]
+Description=Biwrawater Scheduler
+After=network.target
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/biwrawater
+ExecStart=/usr/bin/php artisan schedule:work
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

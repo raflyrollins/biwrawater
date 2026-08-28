@@ -1,0 +1,20 @@
+# Biwrawater Queue Worker
+# Salin ke /etc/systemd/system/biwrawater-queue.service
+# lalu: sudo systemctl daemon-reload && sudo systemctl enable --now biwrawater-queue
+#
+# Jika php 8.4 tidak di /usr/bin/php, sesuaikan ExecStart (mis. /usr/bin/php8.4).
+
+[Unit]
+Description=Biwrawater Queue Worker
+After=network.target
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/biwrawater
+ExecStart=/usr/bin/php artisan queue:work --sleep=3 --tries=3
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
