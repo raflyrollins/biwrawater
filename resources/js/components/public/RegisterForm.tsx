@@ -5,7 +5,9 @@ import type { FormEvent } from 'react';
 
 import { cn } from '../../lib/utils';
 import { register as authRegister } from '../../routes/auth';
+import google from '../../routes/auth/google';
 import FieldError from './FieldError';
+import GoogleMark from './GoogleMark';
 
 interface RegisterFormProps {
     onSwitchMode: (mode: 'login' | 'register') => void;
@@ -33,6 +35,20 @@ export default function RegisterForm({ onSwitchMode }: RegisterFormProps) {
             <p className="mb-8 text-body">
                 Buat akun baru untuk mulai memesan.
             </p>
+
+            <a
+                href={google.redirect.url()}
+                className="btn btn-white mb-5 w-full"
+            >
+                <GoogleMark />
+                Daftar dengan Google
+            </a>
+
+            <div className="mb-5 flex items-center gap-3 text-xs text-body-subtle">
+                <span className="h-px flex-1 bg-neutral-primary-soft" />
+                atau
+                <span className="h-px flex-1 bg-neutral-primary-soft" />
+            </div>
 
             <form onSubmit={submit} className="flex flex-col gap-5">
                 <div>

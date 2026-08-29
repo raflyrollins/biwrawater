@@ -5,7 +5,9 @@ import type { FormEvent } from 'react';
 
 import { cn } from '../../lib/utils';
 import { login as authLogin } from '../../routes/auth';
+import google from '../../routes/auth/google';
 import FieldError from './FieldError';
+import GoogleMark from './GoogleMark';
 
 interface LoginFormProps {
     onSwitchMode: (mode: 'login' | 'register') => void;
@@ -31,6 +33,20 @@ export default function LoginForm({ onSwitchMode }: LoginFormProps) {
             <p className="mb-8 text-body">
                 Selamat datang kembali! Masuk ke akun Anda.
             </p>
+
+            <a
+                href={google.redirect.url()}
+                className="btn btn-white mb-5 w-full"
+            >
+                <GoogleMark />
+                Masuk dengan Google
+            </a>
+
+            <div className="mb-5 flex items-center gap-3 text-xs text-body-subtle">
+                <span className="h-px flex-1 bg-neutral-primary-soft" />
+                atau
+                <span className="h-px flex-1 bg-neutral-primary-soft" />
+            </div>
 
             <form onSubmit={submit} className="flex flex-col gap-5">
                 <div>

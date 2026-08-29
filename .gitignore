@@ -29,3 +29,4 @@ yarn-error.log
 **/*.md
 !/PROGRESS-DEPLOY.md
 /sessions
+/MOBILE_GUIDE

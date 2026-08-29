@@ -3,6 +3,7 @@
 use App\Http\Controllers\AddressController;
 use App\Http\Controllers\AreaController;
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\Auth\GoogleOAuthController;
 use App\Http\Controllers\AuthPageController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\DashboardController;
@@ -28,6 +29,11 @@ Route::get('/register', [AuthPageController::class, 'register'])->name('register
 Route::post('/login', [AuthController::class, 'login'])->name('auth.login');
 Route::post('/register', [AuthController::class, 'register'])->name('auth.register');
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('auth.logout');
+
+Route::prefix('auth/google')->name('auth.google.')->group(function (): void {
+    Route::get('/', [GoogleOAuthController::class, 'redirect'])->name('redirect');
+    Route::get('/callback', [GoogleOAuthController::class, 'callback'])->name('callback');
+});
 
 Route::middleware('auth')->group(function (): void {
     Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
