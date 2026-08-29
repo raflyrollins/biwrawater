@@ -1,7 +1,7 @@
 # Progress Deploy — Biwrawater ke VPS
 
 > Riwayat deploy dari awal sampai **2026-08-29**. Saat ini aplikasi **sudah live** di `https://biwrawater.my.id`.
-> Bagian atas adalah catatan setup awal; bagian **"Update 2026-08-29"** di bawah adalah status terkini — lanjutkan dari sana.
+> Bagian atas adalah catatan setup awal; bagian **"Update 2026-08-29 (sore) - Google Login backend OAuth flow (LIVE)"** adalah status terkini - lanjutkan dari sana.
 
 ---
 
@@ -160,6 +160,36 @@ sudo ufw allow 8080/tcp
 4. **Deploy ke VPS butuh build frontend ulang** setiap ganti `REVERB_*`/`APP_URL` (nilai di-embed saat `npm run build`).
 5. **Saat ganti ke domain + SSL nanti**: perlu ubah `APP_URL`, `SESSION_DOMAIN`, `REVERB_HOST/SCHEME/PORT`, nginx `443` + WSS proxy, redirect `http→https`, dan `config:clear` + cache ulang.
 6. Sesi ini juga menghasilkan **Postman collection** untuk menguji API mobile (`/api/v1`).
+
+---
+
+# Update 2026-08-29 (sore) - Google Login backend OAuth flow (LIVE)
+
+> Deploy commit `21e8ebc` ke VPS (`raplikun@157.10.252.168`, `/var/www/biwrawater`). Google login **sudah live** di web.
+
+## Yang dideploy
+1. **Backend OAuth flow Google** (web + mobile deep-link):
+   - `GET /auth/google` - redirect ke Google (opsional `?redirect=` deep link untuk mobile).
+   - `GET /auth/google/callback` - web: login session -> dashboard; mobile: Sanctum token -> `myapp://auth?token=...`.
+   - `GoogleOAuthService` (redirect/user/resolveUser) + `GoogleOAuthController`.
+   - Endpoint API akses-token tetap ada: `POST /api/v1/auth/social/google`.
+2. **Migration** `add_google_id_and_avatar_to_users_table` - sudah `migrate --force`.
+3. **`.env` VPS** ditambah: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI=https://biwrawater.my.id/auth/google/callback`, `GOOGLE_MOBILE_REDIRECT_SCHEME=myapp`.
+4. **Frontend**: tombol "Masuk/Daftar dengan Google" (`GoogleMark.tsx`) di halaman login/register; `npm ci && npm run build` ulang.
+5. **Cache**: `php artisan optimize` (config/route/view) setelah deps + route baru.
+
+## Jebakan baru yang teratasi
+- **Route/config cache produksi ketertinggalan**: setelah `git pull`, `route:list --name=google` kosong dan `npm run build` gagal `UNRESOLVED_IMPORT '../../routes/auth/google'` - Wayfinder bikin modul dari route **segar**. Solusi: **`php artisan optimize:clear` dulu -> baru `npm run build` -> lalu `optimize` lagi**.
+- **Izin storage saat deploy sebagai `raplikun`**: `composer install` gagal nulis `storage/logs` (owner `www-data`). Solusi: `sudo usermod -aG www-data raplikun` + `chmod -R g+rwX storage bootstrap/cache`. Group folder tetap `www-data:www-data` (PHP-FPM masih bisa tulis) + `raplikun` masuk grup `www-data`.
+
+## Verifikasi live
+- `GET https://biwrawater.my.id/login` -> 200, HTML berisi "Masuk dengan Google".
+- `GET https://biwrawater.my.id/auth/google` -> **302** ke `accounts.google.com/o/oauth2/auth` dengan `client_id` & `redirect_uri=https://biwrawater.my.id/auth/google/callback` & `scope=openid+profile+email`.
+
+## Yang masih perlu
+- [ ] **Google Cloud Console**: daftarkan `https://biwrawater.my.id/auth/google/callback` sebagai *Authorized redirect URI* (web) supaya login benar-benar bisa menyelesaikan OAuth.
+- [ ] Selesaikan callback OAuth end-to-end (konsen -> callback -> session login) dari browser.
+- [ ] Tes alur mobile deep-link (aplikasi: buka `myapp://auth?token=...`).
 
 ---
 
